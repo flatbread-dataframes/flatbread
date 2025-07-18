@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from functools import singledispatch
 from typing import Any
-import warnings
 
 import pandas as pd
 
@@ -80,10 +79,10 @@ class ValuesAndTotals:
 
         if self.axis == 0:  # column percentages
             column_sums = self.values.sum(axis=0)
-            return (abs(column_sums - self.totals) < tolerance).all()
+            return (abs(column_sums - self.totals) < tolerance).all() # type: ignore
         elif self.axis == 1:  # row percentages
             row_sums = self.values.sum(axis=1)
-            return (abs(row_sums - self.totals) < tolerance).all()
+            return (abs(row_sums - self.totals) < tolerance).all() # type: ignore
         else:  # axis == 2, grand total
             return abs(self.values.sum().sum() - self.totals) < tolerance
 
@@ -172,7 +171,7 @@ def _(
         apportioned_rounding = abs(values.sum() - total) < 1e-10
 
     rounding = round_apportioned if apportioned_rounding else round
-    return pcts.pipe(rounding, ndigits=ndigits).rename(label_pct)
+    return pcts.pipe(rounding, ndigits=ndigits).rename(label_pct) # type: ignore
 
 
 @as_percentages.register
@@ -210,7 +209,7 @@ def _(
 
     rounding = round_apportioned if apportioned_rounding else round
 
-    return pcts.pipe(rounding, ndigits=ndigits)
+    return pcts.pipe(rounding, ndigits=ndigits) # type: ignore
 
 
 # region add pct
@@ -224,6 +223,63 @@ def add_percentages(
     apportioned_rounding: bool = True,
     **kwargs,
 ) -> Any:
+    """
+    Add percentage columns alongside original data based on calculated proportions.
+
+    This function creates a side-by-side display with the original data columns
+    and corresponding percentage columns. For DataFrames, percentages can be
+    calculated relative to row totals, column totals, or grand total. For Series,
+    percentages are calculated relative to a designated total value.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        Input data containing values for percentage calculation.
+    axis : int | Literal["index", "columns", "both"], optional
+        The axis along which percentages are calculated (DataFrame only):
+        - 0 or "index": percentages based on column totals
+        - 1 or "columns": percentages based on row totals
+        - 2 or "both": percentages based on grand total
+        Default is 2.
+    label_n : str, optional
+        Label for the original data columns/column. Default is 'n'.
+    label_pct : str, optional
+        Label for the percentage columns/column. Default is 'pct'.
+    label_totals : str | None, optional
+        Label identifying the totals row/column. If None, assumes totals are in
+        the last position. Default is None.
+    ignore_keys : str | list[str] | None, optional
+        Keys of rows/columns to exclude from percentage calculations (DataFrame only).
+    ndigits : int, optional
+        Number of decimal places for rounding. Use -1 for no rounding. Default is -1.
+    base : int, optional
+        The base value for percentage calculation (e.g., 1 for proportions,
+        100 for percentages). Default is 1.
+    apportioned_rounding : bool | None, optional
+        Whether to use apportioned rounding that ensures percentages sum to the base.
+        If None, uses heuristic based on whether data represents complete proportions.
+        Default varies by implementation.
+    interleaf : bool, optional
+        Whether to interleave percentage columns with original columns rather than
+        grouping them separately (DataFrame only). Default is False.
+
+    Returns
+    -------
+    pd.DataFrame
+        Original data with additional percentage columns. For Series input, returns
+        DataFrame with both original and percentage columns.
+
+    Notes
+    -----
+    The function uses apportioned rounding when data represents complete proportions
+    of totals to ensure percentages sum exactly to the base value. This is
+    automatically detected when `apportioned_rounding` is None by checking if
+    values sum to their totals within floating-point tolerance (1e-10).
+
+    See Also
+    --------
+    as_percentages : Transform data to percentages without preserving originals
+    """
     raise NotImplementedError('No implementation for this type')
 
 
@@ -240,6 +296,7 @@ def _(
     apportioned_rounding: bool = True,
     **kwargs,
 ) -> pd.DataFrame:
+    """Series implementation of add_percentages."""
     pcts = data.pipe(
         as_percentages,
         label_pct = label_pct,
@@ -269,18 +326,10 @@ def _(
     interleaf: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
-
+    """DataFrame implementation of add_percentages."""
     cols = chaining.get_data_mask(df.columns, ignore_keys)
     data = df.loc[:, cols]
 
-    # totals = get_totals(data, axis, label_totals)
-    # axis = axis if axis < 2 else None
-    # pcts = (
-    #     data
-    #     .div(totals, axis=axis)
-    #     .mul(100)
-    #     .pipe(round_apportioned, ndigits=ndigits)
-    # )
     pcts = data.pipe(
         as_percentages,
         axis = axis,
