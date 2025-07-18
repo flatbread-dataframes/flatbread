@@ -157,6 +157,7 @@ class PitaSeries(PitaDisplayMixin):
         label_totals: str|None = None,
         ndigits: int|None = None,
         base: int = 1,
+        apportioned_rounding: bool|None = None,
     ) -> pd.Series:
         """
         Transform data into percentages.
@@ -185,6 +186,7 @@ class PitaSeries(PitaDisplayMixin):
             label_totals = label_totals,
             ndigits = ndigits,
             base = base,
+            apportioned_rounding = apportioned_rounding,
         )
 
     def as_pct(self, *args, **kwargs):
@@ -197,6 +199,7 @@ class PitaSeries(PitaDisplayMixin):
         label_totals: str|None = None,
         ndigits: int|None = None,
         base: int = 1,
+        apportioned_rounding: bool|None = None,
     ) -> pd.DataFrame:
         """
         Add percentage column to a Series.
@@ -228,6 +231,7 @@ class PitaSeries(PitaDisplayMixin):
             label_totals = label_totals,
             ndigits = ndigits,
             base = base,
+            apportioned_rounding = apportioned_rounding,
         )
 
     def add_pct(self, *args, **kwargs):

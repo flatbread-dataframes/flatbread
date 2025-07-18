@@ -121,7 +121,7 @@ class PitaFrame(PitaDisplayMixin):
         ignore_keys: str|list[str]|None = None,
         ndigits: int|None = None,
         base: int = 1,
-        apportioned_rounding: bool = True,
+        apportioned_rounding: bool|None = None,
     ) -> pd.DataFrame:
         """
         Transform data to percentages based on specified axis.
@@ -172,7 +172,7 @@ class PitaFrame(PitaDisplayMixin):
         ignore_keys: str|list[str]|None = None,
         ndigits: int|None = None,
         base: int = 1,
-        apportioned_rounding: bool = True,
+        apportioned_rounding: bool|None = None,
         interleaf: bool = False,
     ) -> pd.DataFrame:
         """
