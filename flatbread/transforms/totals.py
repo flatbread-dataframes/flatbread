@@ -4,7 +4,7 @@ import pandas as pd
 
 from flatbread import DEFAULTS
 from flatbread.types import Axis, Level
-import flatbread.agg.aggregation as agg
+import flatbread.transforms.aggregation as agg
 import flatbread.tooling as tooling
 import flatbread.axes as axes
 import flatbread.chaining as chaining

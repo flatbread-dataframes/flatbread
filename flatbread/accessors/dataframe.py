@@ -1,11 +1,11 @@
-from typing import Any, Callable, Hashable, Literal, TypeAlias
+from typing import Any, Callable
 from pathlib import Path
 
 import pandas as pd
 
-import flatbread.percentages as pct
-import flatbread.agg.aggregation as agg
-import flatbread.agg.totals as totals
+import flatbread.transforms.percentages as pct
+import flatbread.transforms.aggregation as agg
+import flatbread.transforms.totals as totals
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.render.display import PitaDisplayMixin

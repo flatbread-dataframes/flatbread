@@ -4,7 +4,7 @@ from random import randint
 import pandas as pd
 
 from flatbread import DEFAULTS
-import flatbread.agg.totals as totals
+import flatbread.transforms.totals as totals
 from flatbread.testing.dataframe import make_test_df
 
 
