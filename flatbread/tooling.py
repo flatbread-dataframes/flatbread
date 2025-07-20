@@ -116,3 +116,41 @@ def sort_index_from_list(
 ) -> pd.DataFrame|pd.Series:
     sorter = lambda idx: idx.map({n:m for m,n in enumerate(order)})
     return data.sort_index(axis=axis, level=level, key=sorter)
+
+
+def reindex_by_levels(
+    df_target: pd.DataFrame,
+    df_reference: pd.DataFrame,
+    nlevels: int | None = None,
+) -> pd.DataFrame:
+   """
+   Reindex df_target columns according to the level ordering in df_reference.
+
+   Parameters
+   ----------
+   df_target : pd.DataFrame
+       DataFrame to reindex, with n+k levels in columns
+   df_reference : pd.DataFrame
+       Reference DataFrame with n levels in columns that define the ordering
+   nlevels : int or None, optional
+       Number of levels to reindex. If None, reindex all levels in df_reference.
+       If int, reindex only the first `levels` levels from df_reference.
+
+   Returns
+   -------
+   pd.DataFrame
+       df_target reindexed with specified column levels ordered as in df_reference
+
+   Notes
+   -----
+   Any additional levels in df_target beyond those reindexed are left unchanged.
+   """
+   df_reindexed = df_target.copy()
+   max_levels = df_reference.columns.nlevels if nlevels is None else nlevels
+
+   for level in range(max_levels):
+       df_reindexed = df_reindexed.reindex(
+           columns=df_reference.columns.get_level_values(level).unique(),
+           level=level
+       )
+   return df_reindexed

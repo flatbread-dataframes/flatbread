@@ -11,7 +11,7 @@ import flatbread.tooling as tooling
 import flatbread.axes as axes
 
 
-# region vals and totes
+# region vals 'n totes
 @dataclass
 class ValuesAndTotals:
     values: pd.DataFrame
@@ -305,7 +305,7 @@ def _(
         base = base,
         apportioned_rounding = apportioned_rounding,
     )
-    output = pd.concat([data, pcts], keys=[label_n, label_pct], axis=1)
+    output = pd.concat({label_n: data, label_pct: pcts}, axis=1)
     return output
 
 
@@ -314,7 +314,7 @@ def _(
 @chaining.persist_ignored('percentages', 'label_pct')
 def _(
     df: pd.DataFrame,
-    axis: int = 2,
+    axis: Axis = 2,
     *,
     label_n: str = 'n',
     label_pct: str = 'pct',
@@ -344,8 +344,7 @@ def _(
     if cols.all():
         # if not then add them, original table gets `label_n`
         # percentages get `label_pct` as key
-        keys = [label_n, label_pct]
-        output = pd.concat([df, pcts], keys=keys, axis=1)
+        output = pd.concat({label_n: df, label_pct: pcts}, axis=1)
     else:
         # if percentages are present then transform them first
         # keys are already present in the original df
@@ -354,8 +353,12 @@ def _(
         output = pd.concat([df, pcts], axis=1)
     if interleaf:
         # return output.stack(0).unstack(-1)
-        keys = [label_n, label_pct]
-        return output.swaplevel(axis=1).sort_index(axis=1, level=0)
+        new_order = list(range(1, output.columns.nlevels)) + [0]
+        return (
+            output
+            .reorder_levels(new_order, axis=1)
+            .pipe(tooling.reindex_by_levels, data)
+        )
     return output
 
 
