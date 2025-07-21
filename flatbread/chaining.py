@@ -3,6 +3,8 @@ from typing import Callable
 
 import pandas as pd
 
+from flatbread import DEFAULTS
+
 
 def get_data_mask(index, ignore_keys):
     """
@@ -47,42 +49,40 @@ def get_data_mask(index, ignore_keys):
     return pd.Series(result, index=index)
 
 
-def persist_ignored(component: str, label: str) -> Callable:
+def tag_labels(transform: str) -> Callable:
     """
-    Remember the labels that need to be ignored when chaining operations. The `ignore_keys` are stored in `df.attrs` in a set.
+    Tag labels produced by flatbread operations for tracking in chained operations.
+
+    This decorator identifies which labels are produced by a transform so that
+    future operations can make informed decisions about what to ignore. The labels
+    to track are determined by the 'key_labels' configuration for the transform.
 
     Parameters
     ----------
-    component (str):
-        Key (used in `df.attrs`) referring to the flatbread component to store the `ignore_keys` for, i.e. "totals" or "percentages".
-    label (str):
-        The label that needs to be added to the `ignore_keys` during chained flatbread operations.
+    transform : str
+        The transform name that corresponds to a section in the flatbread config
+        (e.g., 'totals', 'percentages', 'differences').
 
     Returns
     -------
-    func:
-        A func operating on a df that stores `ignore_keys` in the `df.attrs`.
+    Callable
+        Decorated function that tracks its key labels in df.attrs.
 
     Notes
-     ----
-    The `df.attrs` are currently not retained throughout all pandas operations.
-
-    Example of how ignored keys are stored in attrs:
+    -----
+    Labels are stored in df.attrs under the structure:
     ```python
     {'flatbread': {
-        'totals': {'ignore_keys': {'Subtotals', 'Totals'}},
-        'percentages': {'ignore_keys': {'pct'}}
+        'labels': {
+            'percentages': ['pct'],
+            'totals': ['Totals'],
+            'differences': ['diff']
+        }
     }}
     ```
     """
-    def get_ignored_keys(ignore_keys, label):
-        if ignore_keys is None:
-            return [label]
-        elif isinstance(ignore_keys, str):
-            return [label, ignore_keys]
-        return [label, *ignore_keys]
-
-    def set_nested_key(data, keys, value):
+    def set_nested_key(data: dict, keys: list[str], value) -> None:
+        """Set a value in a nested dictionary structure."""
         if len(keys) == 1:
             data[keys[0]] = value
         else:
@@ -91,26 +91,51 @@ def persist_ignored(component: str, label: str) -> Callable:
                 data[key] = {}
             set_nested_key(data[key], keys[1:], value)
 
-    def get_nested_key(data, keys):
+    def get_nested_key(data: dict, keys: list[str]) -> set:
+        """Get a value from nested dictionary, returning empty set if not found."""
         for key in keys:
             if key in data:
                 data = data[key]
             else:
                 return set()
-        return data
+        return data if isinstance(data, set) else set(data) if data else set()
 
-    keys = ['flatbread', component, 'ignore_keys']
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(df, *args, **kwargs):
-            persisted_ignore_keys = get_nested_key(df.attrs, keys)
-            ignore_keys = kwargs.pop('ignore_keys', None)
-            ignored_label = kwargs[label]
-            ignored = get_ignored_keys(ignore_keys, ignored_label)
-            all_ignored = persisted_ignore_keys.union(ignored)
+        def wrapper(df: pd.DataFrame, *args, **kwargs) -> pd.DataFrame:
+            # Get transform configuration from transforms section
+            transform_config = DEFAULTS.get('transforms', {}).get(transform, {})
+            key_label_params = transform_config.get('key_labels', [])
 
-            result = func(df, *args, ignore_keys=all_ignored, **kwargs)
-            set_nested_key(result.attrs, keys, all_ignored)
+            # Extract the actual label values from function parameters
+            labels_to_track = []
+            for param_name in key_label_params:
+                if param_name in kwargs and kwargs[param_name] is not None:
+                    labels_to_track.append(kwargs[param_name])
+
+            # Execute the original function
+            result = func(df, *args, **kwargs)
+
+            # Get existing tracked labels for this transform
+            existing_labels = get_nested_key(
+                result.attrs,
+                ['flatbread', 'labels', transform]
+            )
+
+            # Combine existing and new labels
+            all_labels = existing_labels.union(labels_to_track)
+
+            # Store updated labels in result attrs
+            if not hasattr(result, 'attrs'):
+                result.attrs = {}
+
+            set_nested_key(
+                result.attrs,
+                ['flatbread', 'labels', transform],
+                all_labels
+            )
+
             return result
+
         return wrapper
     return decorator

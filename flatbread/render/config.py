@@ -34,22 +34,26 @@ class DisplayConfig:
         if not defaults:
             return cls()
 
-        margin_labels = []
-        if totals := defaults.get('totals', {}):
-            margin_labels.append(totals.get('label', 'Totals'))
-        if subtotals := defaults.get('subtotals', {}):
-            margin_labels.append(subtotals.get('label', 'Subtotals'))
-        if percentages := defaults.get('percentages', {}):
-            margin_labels.append(percentages.get('label_pct', 'pct'))
+        margin_labels = set()
+        transforms = defaults.get('transforms', {})
+        data_attrs = {} if data_attrs is None else data_attrs
+        attr_labels = data_attrs.get('flatbread', {}).get('labels')
 
-        # Add ignored keys from attrs
-        if data_attrs and (fb_attrs := data_attrs.get('flatbread')):
-            if totals_attrs := fb_attrs.get('totals'):
-                if ignore_keys := totals_attrs.get('ignore_keys'):
-                    margin_labels.extend(ignore_keys)
-            if percentages_attrs := fb_attrs.get('percentages'):
-                if ignore_keys := percentages_attrs.get('ignore_keys'):
-                    margin_labels.extend(ignore_keys)
+        for transform_config in transforms.values():
+            config_labels = transform_config.get('margin_labels', [])
+
+            for margin_label in config_labels:
+                # Config-based label
+                if margin_label in transform_config:
+                    label_value = transform_config[margin_label]
+                    if label_value is not None:
+                        margin_labels.add(label_value)
+
+                # Runtime attrs label
+                if attr_labels and margin_label in attr_labels:
+                    attr_label = attr_labels[margin_label]
+                    if attr_label is not None:
+                        margin_labels.add(attr_label)
 
         # Extract values from defaults, using dataclass defaults if not present
         return cls(

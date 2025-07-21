@@ -1,18 +1,28 @@
 {
-    "totals": {
-        "label": "Totals",
-        "ignore_keys": ["Subtotals"]
-    },
-    "subtotals": {
-        "label": "Subtotals",
-        "include_level_name": false,
-        "ignore_keys": ["Totals"]
-    },
-    "percentages": {
-        "label_pct": "pct",
-        "label_n": "n",
-        "ndigits": -1,
-        "base": 1
+    "transforms": {
+        "totals": {
+            "label": "Totals",
+            "key_labels": ["label"],
+            "margin_labels": ["label"]
+        },
+        "subtotals": {
+            "label": "Subtotals",
+            "include_level_name": false,
+            "key_labels": ["label"],
+            "margin_labels": ["label"]
+        },
+        "percentages": {
+            "label_pct": "pct",
+            "label_n": "n",
+            "ndigits": -1,
+            "base": 1,
+            "key_labels": ["label_pct"]
+        },
+        "differences": {
+            "label_n": "n",
+            "label_diff": "diff",
+            "key_labels": ["label_diff"]
+        }
     },
     "locale": null,
     "format_presets": {

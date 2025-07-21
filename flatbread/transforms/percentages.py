@@ -11,6 +11,24 @@ import flatbread.tooling as tooling
 import flatbread.axes as axes
 
 
+# region chaining
+def _resolve_ignored_keys(
+    data: pd.DataFrame|pd.Series,
+    axis: int,
+    ignore_keys: str|list[str]|None,
+):
+    keys_to_ignore = []
+
+    if isinstance(ignore_keys, str):
+        keys_to_ignore.append(ignore_keys)
+    elif isinstance(ignore_keys, list):
+        keys_to_ignore.extend(ignore_keys)
+
+    tracked = data.attrs.get('flatbread', {}).get('labels', {})
+    keys_to_ignore.extend(tracked.get('percentage', []))
+    return keys_to_ignore
+
+
 # region vals 'n totes
 @dataclass
 class ValuesAndTotals:
@@ -139,7 +157,7 @@ def as_percentages(
 
 
 @as_percentages.register
-@tooling.inject_defaults(DEFAULTS['percentages'])
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
 def _(
     data: pd.Series,
     *,
@@ -175,21 +193,24 @@ def _(
 
 
 @as_percentages.register
-@tooling.inject_defaults(DEFAULTS['percentages'])
-@chaining.persist_ignored('percentages', 'label_pct')
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@chaining.tag_labels('percentages')
 def _(
     df: pd.DataFrame,
     axis: Axis = 2,
     *,
     label_totals: str|None = None,
-    ignore_keys: str|list[str]|None = 'pct',
+    ignore_keys: str|list[str]|None = None,
     ndigits: int = -1,
     base: int = 1,
     apportioned_rounding: bool|None = None,
     **kwargs,
 ) -> pd.DataFrame:
     """DataFrame implementation of as_percentages."""
-    cols = chaining.get_data_mask(df.columns, ignore_keys)
+    axis = axes.resolve_axis(axis)
+    keys_to_ignore = _resolve_ignored_keys(df, axis, ignore_keys)
+
+    cols = chaining.get_data_mask(df.columns, keys_to_ignore)
     data = df.loc[:, cols]
     vt = ValuesAndTotals.from_data(data, axis, label_totals)
 
@@ -284,7 +305,7 @@ def add_percentages(
 
 
 @add_percentages.register
-@tooling.inject_defaults(DEFAULTS['percentages'])
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
 def _(
     data: pd.Series,
     *,
@@ -310,8 +331,8 @@ def _(
 
 
 @add_percentages.register
-@tooling.inject_defaults(DEFAULTS['percentages'])
-@chaining.persist_ignored('percentages', 'label_pct')
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@chaining.tag_labels('percentages')
 def _(
     df: pd.DataFrame,
     axis: Axis = 2,
@@ -319,7 +340,7 @@ def _(
     label_n: str = 'n',
     label_pct: str = 'pct',
     label_totals: str|None = None,
-    ignore_keys: str|list[str]|None = 'pct',
+    ignore_keys: str|list[str]|None = None,
     ndigits: int = -1,
     base: int = 1,
     apportioned_rounding: bool = True,
@@ -327,7 +348,10 @@ def _(
     **kwargs,
 ) -> pd.DataFrame:
     """DataFrame implementation of add_percentages."""
-    cols = chaining.get_data_mask(df.columns, ignore_keys)
+    axis = axes.resolve_axis(axis)
+    keys_to_ignore = _resolve_ignored_keys(df, axis, ignore_keys)
+
+    cols = chaining.get_data_mask(df.columns, keys_to_ignore)
     data = df.loc[:, cols]
 
     pcts = data.pipe(

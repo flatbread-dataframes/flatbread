@@ -17,12 +17,12 @@ for preset_name, preset_config in USER_PRESETS.items():
 
 SMART_FORMATS = {
     'percentages': {
-        'labels': [DEFAULTS['percentages']['label_pct']],
+        'labels': [DEFAULTS['transforms']['percentages']['label_pct']],
         'options': {
             'style': 'percent',
             'minimumFractionDigits': 0,
             'maximumFractionDigits':
-                DEFAULTS['percentages']['ndigits'] if DEFAULTS['percentages']['ndigits'] >= 0 else 21,
+                DEFAULTS['transforms']['percentages']['ndigits'] if DEFAULTS['transforms']['percentages']['ndigits'] >= 0 else 21,
         },
         'excel_format': '0.0%'
     },
