@@ -8,6 +8,21 @@ class ConfigService:
         self._config: dict[str, Any] | None = None
         self._sources: list[str] = []
 
+    def __repr__(self) -> str:
+        return f"ConfigService(loaded={self._config is not None})"
+
+    def __str__(self) -> str:
+        self._ensure_loaded()  # Force loading for inspection
+
+        sources_info = []
+        for i, source in enumerate(self._sources, 1):
+            name = Path(source).name
+            sources_info.append(f"  {i}. {name}")
+
+        sources_str = "\n".join(sources_info) if sources_info else "  (none)"
+
+        return f"ConfigService loaded from {len(self._sources)} sources:\n{sources_str}\n\nFinal config: {self._config}"
+
     def __getitem__(self, key):
         return self.config[key]
 
