@@ -42,6 +42,27 @@ class DisplayConfig:
         if not defaults:
             return cls()
 
+        # Extract standard config fields from defaults
+        standard_fields = {
+            field.name: defaults.get(field.name, field.default)
+            for field in fields(cls)
+            if field.name != 'margin_labels'
+        }
+
+        # Handle computed fields with custom logic
+        computed_fields = {
+            'margin_labels': cls._extract_margin_labels(defaults, data_attrs)
+        }
+
+        return cls(**(standard_fields | computed_fields))
+
+    @classmethod
+    def _extract_margin_labels(
+        cls,
+        defaults: dict[str, Any],
+        data_attrs: dict|None
+    ) -> set[str]:
+        """Extract margin labels from defaults and data_attrs"""
         margin_labels = set()
         transforms = defaults.get('transforms', {})
         data_attrs = {} if data_attrs is None else data_attrs
@@ -49,28 +70,17 @@ class DisplayConfig:
 
         for transform_config in transforms.values():
             config_labels = transform_config.get('margin_labels', [])
-
             for margin_label in config_labels:
-                # Config-based label
                 if margin_label in transform_config:
                     label_value = transform_config[margin_label]
                     if label_value is not None:
                         margin_labels.add(label_value)
-
-                # Runtime attrs label
                 if attr_labels and margin_label in attr_labels:
                     attr_label = attr_labels[margin_label]
                     if attr_label is not None:
                         margin_labels.add(attr_label)
 
-        settings = {
-            field.name:field.default
-            for field in fields(cls)
-        }
-        settings['margin_labels'] = margin_labels
-
-        # Extract values from defaults, using dataclass defaults if not present
-        return cls(**settings))  # type: ignore
+        return margin_labels
 
 
 # region manager
@@ -250,7 +260,6 @@ class PitaDisplayMixin:
 
     def _repr_html_(self) -> str:
         """Generate HTML representation for Jupyter display"""
-        print(self._config)
         spec = self._table_spec_builder.get_spec_as_json()
         return self._template_manager.render(spec, self._config)
 
