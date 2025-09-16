@@ -14,7 +14,7 @@ warnings.filterwarnings(
     'ignore',
     category=pd.errors.PerformanceWarning,
     message='indexing past lexsort depth may impact performance.',
-    module='flatbread.agg.aggregation',
+    module='flatbread.transforms.aggregation',
 )
 
 

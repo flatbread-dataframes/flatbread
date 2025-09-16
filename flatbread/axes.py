@@ -192,8 +192,8 @@ def sort_totals(
     Item2       3
     """
     labels = [
-        DEFAULTS['subtotals']['label'],
-        DEFAULTS['totals']['label'],
+        DEFAULTS['transforms']['subtotals']['label'],
+        DEFAULTS['transforms']['totals']['label'],
     ] if labels is None else labels
 
     return sort_aggregates(

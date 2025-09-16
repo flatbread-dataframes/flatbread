@@ -8,7 +8,7 @@ import flatbread.transforms.aggregation as agg
 import flatbread.transforms.totals as totals
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
-from flatbread.render.display import PitaDisplayMixin
+from flatbread.output.html import PitaDisplayMixin
 
 
 @pd.api.extensions.register_dataframe_accessor("pita")
@@ -376,8 +376,8 @@ class PitaFrame(PitaDisplayMixin):
         **kwargs
             Additional arguments passed to pandasxl WorksheetManager
         """
-        import flatbread.io.excel as excel
-        return excel.export_excel(
+        from flatbread.output.excel import export_excel
+        return export_excel(
             self._obj,
             filepath,
             title=title,

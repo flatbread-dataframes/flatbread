@@ -1,0 +1,49 @@
+{%- macro set_value_attr(config_key, attr_name) -%}
+    {%- if config[config_key] is defined and config[config_key] is not none %}
+    viewer.setAttribute("{{ attr_name }}", "{{ config[config_key] }}")
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro set_bool_attr(config_key, attr_name) -%}
+    {%- if config[config_key] is defined and config[config_key] %}
+    viewer.setAttribute("{{ attr_name }}", "")
+    {%- endif -%}
+{%- endmacro -%}
+
+<div id="{{ id }}"></div>
+<script type="module">
+  import { DataViewer } from "https://flatbread-dataframes.github.io/flatbread-wc-table-display/src/viewer.js"
+
+  customElements.whenDefined("flatbread-table").then(() => {
+    const data = {{ data | safe }}
+    const viewer = new DataViewer()
+    viewer.data = data
+    viewer.setAttribute("hide-settings-menu", "")
+    {%- if config.locale is defined and config.locale is not none %}
+    viewer.setAttribute("locale", "{{ config.locale }}")
+    {%- endif %}
+    {%- if config.na_rep is defined and config.na_rep is not none %}
+    viewer.setAttribute("na-rep", "{{ config.na_rep }}")
+    {%- endif %}
+    {%- if config.margin_labels is defined and config.margin_labels is not none %}
+    viewer.setAttribute("margin-labels", "{{ config.margin_labels|join(';') }}")
+    {%- endif %}
+    {{- set_value_attr('section_levels', 'section-levels') }}
+    {{- set_value_attr('max_rows', 'max-rows') }}
+    {{- set_value_attr('max_columns', 'max-columns') }}
+    {{- set_value_attr('trim_size', 'trim-size') }}
+    {{- set_value_attr('separator', 'separator') }}
+    {%- if config.collapse_columns is defined and config.collapse_columns is not none %}
+    viewer.setAttribute("collapse-columns", "{{ config.collapse_columns|lower }}")
+    {%- endif %}
+    {{- set_bool_attr('hide_column_borders', 'hide-column-borders') }}
+    {{- set_bool_attr('hide_row_borders', 'hide-row-borders') }}
+    {{- set_bool_attr('hide_thead_border', 'hide-thead-border') }}
+    {{- set_bool_attr('hide_index_border', 'hide-index-border') }}
+    {{- set_bool_attr('show_hover', 'show-hover') }}
+
+    const placeholder = document.getElementById("{{ id }}")
+    placeholder.parentNode.replaceChild(viewer, placeholder)
+    console.log(viewer)
+  })
+</script>

@@ -30,4 +30,4 @@ classifiers = [
 keywords = ["pandas", "aggregation", "tables", "display", "dataframe", "extension"]
 
 [project.urls]
-Homepage = "https://github.com/lcvriend/flatbread"
+Homepage = "https://github.com/flatbread-dataframes/flatbread"

@@ -25,10 +25,54 @@
         }
     },
     "locale": null,
+    "output_formats": {
+        "percentage": {
+            "smart_labels": ["pct"],
+            "html_options": {
+                "style": "percent",
+                "minimumFractionDigits": 0,
+                "maximumFractionDigits": 21
+            },
+            "excel_format": "0.0%"
+        },
+        "signed_integer": {
+            "smart_labels": ["diff"],
+            "html_options": {
+                "signDisplay": "always"
+            },
+            "excel_format": "+#,##0;-#,##0"
+        },
+        "signed_percentage": {
+            "smart_labels": [],
+            "html_options": {
+                "style": "percent",
+                "signDisplay": "always"
+            },
+            "excel_format": "+0.0%;-0.0%"
+        }
+    },
+    "dtype_mappings": {
+        "object": "str",
+        "string": "str",
+        "bool": "bool",
+        "boolean": "bool",
+        "category": "category",
+        "datetime64[ns]": "datetime",
+        "float64": "float",
+        "Float64": "float",
+        "int8": "int",
+        "int16": "int",
+        "int32": "int",
+        "int64": "int",
+        "Int8": "int",
+        "Int16": "int",
+        "Int32": "int",
+        "Int64": "int"
+    },
     "format_presets": {
         "currency_eur": {
             "dtypes": ["float", "int"],
-            "options": {
+            "html_options": {
                 "style": "currency",
                 "currency": "EUR"
             },
