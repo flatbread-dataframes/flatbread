@@ -31,3 +31,6 @@ keywords = ["pandas", "aggregation", "tables", "display", "dataframe", "extensio
 
 [project.urls]
 Homepage = "https://github.com/flatbread-dataframes/flatbread"
+
+[project.optional-dependencies]
+dev = ["ipykernel", "jupyter"]
