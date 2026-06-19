@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flatbread"
-version = "0.1.5"
+version = "0.2.0"
 description = "Pandas extension for aggregation and tabular display"
 readme = "readme.md"
 requires-python = ">=3.10"
