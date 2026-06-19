@@ -8,3 +8,4 @@ dist/
 build/
 .vscode
 notebooks
+uv.lock
