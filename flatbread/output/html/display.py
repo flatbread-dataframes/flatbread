@@ -1,11 +1,12 @@
 import uuid
-from dataclasses import dataclass, field, fields, MISSING
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any
 
 from jinja2 import Environment, PackageLoader
 
 from flatbread import DEFAULTS
-from flatbread.output.html.tablespec import TableSpecBuilder, FormatSpec
+from flatbread.output.html.constants import FLATBREAD_TABLE_URL
+from flatbread.output.html.tablespec import FormatSpec, TableSpecBuilder
 
 
 # region config
@@ -22,9 +23,12 @@ class DisplayConfig:
     max_columns: int = 30
     trim_size: int = 5
     separator: str = "..."
+    no_wrap: bool = False
+    column_border_levels: int | None = None
+    section_levels: int | None = None
 
     # Border controls
-    hide_column_borders: bool = False
+    hide_group_borders: bool = False
     hide_row_borders: bool = False
     hide_thead_border: bool = False
     hide_index_border: bool = False
@@ -36,7 +40,7 @@ class DisplayConfig:
     def from_defaults(
         cls,
         defaults: dict[str, Any],
-        data_attrs: dict|None = None,
+        data_attrs: dict | None = None,
     ) -> "DisplayConfig":
         """Create config instance from defaults dict"""
         if not defaults:
@@ -46,30 +50,28 @@ class DisplayConfig:
         standard_fields = {
             field.name: defaults.get(field.name, field.default)
             for field in fields(cls)
-            if field.name != 'margin_labels'
+            if field.name != "margin_labels"
         }
 
         # Handle computed fields with custom logic
         computed_fields = {
-            'margin_labels': cls._extract_margin_labels(defaults, data_attrs)
+            "margin_labels": cls._extract_margin_labels(defaults, data_attrs)
         }
 
         return cls(**(standard_fields | computed_fields))
 
     @classmethod
     def _extract_margin_labels(
-        cls,
-        defaults: dict[str, Any],
-        data_attrs: dict|None
+        cls, defaults: dict[str, Any], data_attrs: dict | None
     ) -> set[str]:
         """Extract margin labels from defaults and data_attrs"""
         margin_labels = set()
-        transforms = defaults.get('transforms', {})
+        transforms = defaults.get("transforms", {})
         data_attrs = {} if data_attrs is None else data_attrs
-        attr_labels = data_attrs.get('flatbread', {}).get('labels')
+        attr_labels = data_attrs.get("flatbread", {}).get("labels")
 
         for transform_config in transforms.values():
-            config_labels = transform_config.get('margin_labels', [])
+            config_labels = transform_config.get("margin_labels", [])
             for margin_label in config_labels:
                 if margin_label in transform_config:
                     label_value = transform_config[margin_label]
@@ -82,19 +84,28 @@ class DisplayConfig:
 
         return margin_labels
 
+    def update(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise AttributeError(f"DisplayConfig has no field '{key}'")
+
 
 # region manager
 class TemplateManager:
     """Manages rendering templates"""
+
     def __init__(self):
         self._env = Environment(loader=PackageLoader("flatbread", "output/html"))
 
     def render(self, spec: str, config: DisplayConfig) -> str:
         template = self._env.get_template("templates/template.jinja.html")
         html = template.render(
-            data   = spec,
+            data = spec,
             config = config,
-            id     = f"id-{uuid.uuid4()}"
+            id = f"id-{uuid.uuid4()}",
+            viewer_url = FLATBREAD_TABLE_URL,
         )
         return html
 
@@ -102,26 +113,26 @@ class TemplateManager:
 # region display
 class PitaDisplayMixin:
     """Mixin for displaying pandas objects using data-viewer"""
+
     @property
     def _config(self) -> DisplayConfig:
-        if not hasattr(self, '_display_config'):
+        if not hasattr(self, "_display_config"):
             self._display_config = DisplayConfig.from_defaults(
-                DEFAULTS,
-                self._obj.attrs if hasattr(self._obj, 'attrs') else None
+                DEFAULTS, self._obj.attrs if hasattr(self._obj, "attrs") else None
             )
         return self._display_config
 
     @property
     def _table_spec_builder(self) -> TableSpecBuilder:
         """Lazy initialization of spec builder"""
-        if not hasattr(self, '_spec_builder'):
+        if not hasattr(self, "_spec_builder"):
             self._spec_builder = TableSpecBuilder(self._obj)
         return self._spec_builder
 
     @property
     def _template_manager(self) -> TemplateManager:
         """Lazy initialization of template manager"""
-        if not hasattr(self, '_template_mgr'):
+        if not hasattr(self, "_template_mgr"):
             self._template_mgr = TemplateManager()
         return self._template_mgr
 
@@ -162,15 +173,15 @@ class PitaDisplayMixin:
 
     def hide_borders(self, hide: bool = True) -> "PitaDisplayMixin":
         """Hide all borders"""
-        self._config.hide_column_borders = hide
+        self._config.hide_group_borders = hide
         self._config.hide_row_borders = hide
         self._config.hide_thead_border = hide
         self._config.hide_index_border = hide
         return self
 
-    def show_column_borders(self, show: bool = True) -> "PitaDisplayMixin":
+    def show_group_borders(self, show: bool = True) -> "PitaDisplayMixin":
         """Show/hide vertical column borders"""
-        self._config.hide_column_borders = not show
+        self._config.hide_group_borders = not show
         return self
 
     def show_row_borders(self, show: bool = True) -> "PitaDisplayMixin":
@@ -208,26 +219,31 @@ class PitaDisplayMixin:
         self._config.margin_labels = set(labels)
         return self
 
+    def set_no_wrap(self, no_wrap: bool = True) -> "PitaDisplayMixin":
+        """Enable/disable text wrapping in cells"""
+        self._config.no_wrap = no_wrap
+        return self
+
+    def set_column_border_levels(self, levels: int) -> "PitaDisplayMixin":
+        """Set number of column group levels that get borders"""
+        self._config.column_border_levels = levels
+        return self
+
     def format(
         self,
-        column: str,
+        key: str,
         format_spec: str | dict[str, Any],
     ) -> "PitaDisplayMixin":
-        """Set format options for a column
+        """Set format options for a column or index level.
 
         Parameters
         ----------
-        column : str
-            Column to format
+        key : str
+            Column name or index level name to format.
         format_spec : str | dict
-            Either a preset name (e.g. 'currency') or format options dict
-
-        Returns
-        -------
-        PitaDisplayMixin
-            Self for method chaining
+            Either a preset name (e.g. 'currency') or format options dict.
         """
-        self._table_spec_builder.set_format(column, format_spec)
+        self._table_spec_builder.set_format(key, format_spec)
         return self
 
     def format_columns(self, formats: FormatSpec) -> "PitaDisplayMixin":
@@ -245,11 +261,11 @@ class PitaDisplayMixin:
 
         # Add output formats (these are always available)
         for name, config in resolver.output_formats.items():
-            all_presets[name] = config.get('html_options', {})
+            all_presets[name] = config.get("html_options", {})
 
         # Add user-defined format presets
         for name, config in resolver.format_presets.items():
-            all_presets[name] = config.get('html_options', {})
+            all_presets[name] = config.get("html_options", {})
 
         # Filter by dtype if specified (simplified logic)
         if dtype:
@@ -263,25 +279,20 @@ class PitaDisplayMixin:
         spec = self._table_spec_builder.get_spec_as_json()
         return self._template_manager.render(spec, self._config)
 
-    def get_table_spec(self) -> dict:
-        """
-        Get the raw table specification as a dictionary.
+    def data_spec(self) -> dict:
+        """Get the raw table specification as a dictionary.
 
         Returns
         -------
         dict
-            Dictionary containing the complete table specification including:
+            Dictionary containing:
             - values: 2D array of cell values
-            - columns: Column labels
-            - index: Row labels
-            - columnNames: Names for column levels
-            - indexNames: Names for index levels
-            - dtypes: Data types per column
-            - formatOptions: Format configuration per column
+            - columns: dict with values, names, dtypes, formatOptions
+            - index: dict with values, names, dtypes, formatOptions
         """
         return self._table_spec_builder.build_spec()
 
-    def get_table_spec_json(self) -> str:
+    def get_json(self) -> str:
         """
         Get the table specification as a JSON string.
 
@@ -294,3 +305,6 @@ class PitaDisplayMixin:
             and Intervals.
         """
         return self._table_spec_builder.get_spec_as_json()
+
+    get_table_spec_json = get_json
+    get_table_spec = data_spec

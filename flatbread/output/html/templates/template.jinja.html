@@ -12,11 +12,11 @@
 
 <div id="{{ id }}"></div>
 <script type="module">
-  import { DataViewer } from "https://flatbread-dataframes.github.io/flatbread-wc-table-display/src/viewer.js"
+  import { FlatbreadTable } from "{{ viewer_url }}"
 
   customElements.whenDefined("flatbread-table").then(() => {
     const data = {{ data | safe }}
-    const viewer = new DataViewer()
+    const viewer = new FlatbreadTable()
     viewer.data = data
     viewer.setAttribute("hide-settings-menu", "")
     {%- if config.locale is defined and config.locale is not none %}
@@ -36,10 +36,12 @@
     {%- if config.collapse_columns is defined and config.collapse_columns is not none %}
     viewer.setAttribute("collapse-columns", "{{ config.collapse_columns|lower }}")
     {%- endif %}
-    {{- set_bool_attr('hide_column_borders', 'hide-column-borders') }}
+    {{- set_bool_attr('hide_group_borders', 'hide-group-borders') }}
     {{- set_bool_attr('hide_row_borders', 'hide-row-borders') }}
     {{- set_bool_attr('hide_thead_border', 'hide-thead-border') }}
     {{- set_bool_attr('hide_index_border', 'hide-index-border') }}
+    {{- set_value_attr('column_border_levels', 'column-border-levels') }}
+    {{- set_bool_attr('no_wrap', 'no-wrap') }}
     {{- set_bool_attr('show_hover', 'show-hover') }}
 
     const placeholder = document.getElementById("{{ id }}")
