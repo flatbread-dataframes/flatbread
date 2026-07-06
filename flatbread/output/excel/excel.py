@@ -5,44 +5,28 @@ from typing import Any
 import pandas as pd
 
 from flatbread import DEFAULTS
-from flatbread.render.constants import SMART_FORMATS, USER_PRESETS
+from flatbread.output.formats import FormatResolver
 
 
 def _get_auto_number_formats(df: pd.DataFrame) -> dict[str, str]:
-    """Extract number formats from flatbread configuration."""
-    formats = {}
+    """Extract number formats from flatbread configuration.
 
-    # Check smart formats (percentages, differences, etc.)
-    for format_name, format_config in SMART_FORMATS.items():
-        excel_format = format_config.get('excel_format')
-        if not excel_format:
-            continue
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to extract formats for.
 
-        labels = format_config.get('labels', [])
-        for label in labels:
-            # Check both column names and index values
-            for col in df.columns:
-                if _matches_label(col, label):
-                    formats[col] = excel_format
-            for idx in df.index:
-                if _matches_label(idx, label):
-                    formats[idx] = excel_format
-
-    # Check user presets
-    for preset_name, preset_config in USER_PRESETS.items():
-        excel_format = preset_config.get('excel_format')
-        if not excel_format:
-            continue
-
-        # Apply to columns based on dtype matching
-        dtypes = preset_config.get('dtypes', [])
-        for col in df.columns:
-            col_dtype = str(df[col].dtype)
-            # Simple dtype matching - could be more sophisticated
-            if any(dtype_name in col_dtype for dtype_name in dtypes):
-                formats[col] = excel_format
-
-    return formats
+    Returns
+    -------
+    dict[str, str]
+        Mapping of column names to Excel number format strings.
+    """
+    resolver = FormatResolver(df)
+    return {
+        col: fmt
+        for col in df.columns
+        if (fmt := resolver.get_excel_format(col))
+    }
 
 
 def _get_auto_border_specs(df: pd.DataFrame) -> dict[str, list[str]]:
@@ -62,9 +46,9 @@ def _get_auto_border_specs(df: pd.DataFrame) -> dict[str, list[str]]:
 
     # Add default margin labels
     margin_labels.update([
-        DEFAULTS['totals']['label'],
-        DEFAULTS['subtotals']['label'],
-        DEFAULTS['percentages']['label_pct']
+        DEFAULTS['transforms']['totals']['label'],
+        DEFAULTS['transforms']['subtotals']['label'],
+        DEFAULTS['transforms']['percentages']['label_pct'],
     ])
 
     # Remove duplicates
@@ -143,6 +127,13 @@ def _(
             "flatbreadxl is required for Excel export. "
             "Install it with: pip install flatbreadxl"
         )
+
+    # Strip timezone info (Excel does not support timezones)
+    tz_cols = data.select_dtypes(include=["datetimetz"]).columns
+    if len(tz_cols) > 0:
+        data = data.copy()
+        for col in tz_cols:
+            data[col] = data[col].dt.tz_localize(None)
 
     # Extract flatbread settings and translate to pandasxl format
     auto_number_formats = _get_auto_number_formats(data)
