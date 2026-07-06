@@ -56,13 +56,13 @@ def resolve_axis(axis: Axis) -> int:
 
 # region sort aggs
 def sort_aggregates(
-    data: pd.DataFrame|pd.Series,
+    data: pd.DataFrame | pd.Series,
     axis: Axis = 0,
-    level: Level|list[Level]|None = None,
-    labels: list[str]|None = None,
+    level: Level | list[Level] | None = None,
+    labels: list[str] | None = None,
     aggregates_last: bool = True,
     sort_remaining: bool = True,
-) -> pd.DataFrame|pd.Series:
+) -> pd.DataFrame | pd.Series:
     """
     Sort index/columns to position aggregate labels at start or end within groups.
 
@@ -133,10 +133,10 @@ def sort_aggregates(
 
 
 def sort_totals(
-    data: pd.DataFrame|pd.Series,
+    data: pd.DataFrame | pd.Series,
     axis: Axis = 0,
-    level: Level|list[Level]|None = None,
-    labels: list|None = None,
+    level: Level | list[Level] | None = None,
+    labels: list | None = None,
     totals_last: bool = True,
     sort_remaining: bool = True,
 ):
@@ -210,7 +210,7 @@ def sort_totals(
 @singledispatch
 def add_level(
     data,
-    values: Any|list[Any],
+    values: Any | list[Any],
     level: int = 0,
     level_name: Any = None,
     axis: Axis = 0,
@@ -221,7 +221,7 @@ def add_level(
 @add_level.register
 def _(
     data: pd.DataFrame,
-    value: Any|list[Any],
+    value: Any | list[Any],
     level: int = 0,
     level_name: Any = None,
     axis: Axis = 0,
@@ -337,7 +337,7 @@ def _(
 
 
 def add_value_to_key(
-    key: Any|tuple[Any, ...],
+    key: Any | tuple[Any, ...],
     value: Any,
     level: int = 0,
 ) -> tuple[Any, ...]:
@@ -346,7 +346,7 @@ def add_value_to_key(
 
     Parameters
     ----------
-    key (Any|tuple[Any, ...]):
+    key (Any | tuple[Any, ...]):
         Original key.
     value (Any):
         Item to insert into the key.
