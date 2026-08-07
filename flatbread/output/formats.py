@@ -75,13 +75,15 @@ class FormatResolver:
     def _detect_smart_format_type(self, column) -> str | None:
         """Detect format type based on column name patterns"""
         column_text = self._get_column_text(column)
-
+        best_match = None
+        best_length = 0
         for format_type, format_config in self.output_formats.items():
             smart_labels = format_config.get('smart_labels', [])
             for label in smart_labels:
-                if label in column_text:
-                    return format_type
-        return None
+                if label in column_text and len(label) > best_length:
+                    best_match = format_type
+                    best_length = len(label)
+        return best_match
 
     def _get_column_text(self, column) -> str:
         """Extract searchable text from column (handle tuples)"""
