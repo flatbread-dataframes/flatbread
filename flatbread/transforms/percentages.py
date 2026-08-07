@@ -11,24 +11,6 @@ import flatbread.tooling as tooling
 import flatbread.axes as axes
 
 
-# region chaining
-def _resolve_ignored_keys(
-    data: pd.DataFrame|pd.Series,
-    axis: int,
-    ignore_keys: str|list[str]|None,
-):
-    keys_to_ignore = []
-
-    if isinstance(ignore_keys, str):
-        keys_to_ignore.append(ignore_keys)
-    elif isinstance(ignore_keys, list):
-        keys_to_ignore.extend(ignore_keys)
-
-    tracked = data.attrs.get('flatbread', {}).get('labels', {})
-    keys_to_ignore.extend(tracked.get('percentage', []))
-    return keys_to_ignore
-
-
 # region vals 'n totes
 @dataclass
 class ValuesAndTotals:
@@ -105,7 +87,19 @@ class ValuesAndTotals:
             return abs(self.values.sum().sum() - self.totals) < tolerance
 
 
+#region relabel
+def relabel(s: pd.Series, name: str) -> pd.Series:
+    match s.name:
+        case tuple() as t:
+            new_name = (*t, name)
+        case _:
+            new_name = (s.name, name)
+    return s.rename(new_name)
+
+
 # region as pct
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@chaining.tag_labels('percentages')
 @singledispatch
 def as_percentages(
     data,
@@ -157,7 +151,6 @@ def as_percentages(
 
 
 @as_percentages.register
-@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
 def _(
     data: pd.Series,
     *,
@@ -175,13 +168,14 @@ def _(
         data
         .div(total)
         .mul(base)
+        .pipe(relabel, label_pct)
     )
 
     if ndigits == -1:
-        return pcts.rename(label_pct)
+        return pcts
 
     if apportioned_rounding is None:
-        # For Series: check if values sum to total (complete proportions)
+        # check if values sum to total (complete proportions)
         if label_totals is None:
             values = data.iloc[:-1]
         else:
@@ -189,12 +183,10 @@ def _(
         apportioned_rounding = abs(values.sum() - total) < 1e-10
 
     rounding = round_apportioned if apportioned_rounding else round
-    return pcts.pipe(rounding, ndigits=ndigits).rename(label_pct) # type: ignore
+    return pcts.pipe(rounding, ndigits=ndigits) # type: ignore
 
 
 @as_percentages.register
-@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
-@chaining.tag_labels('percentages')
 def _(
     df: pd.DataFrame,
     axis: Axis = 2,
@@ -208,7 +200,7 @@ def _(
 ) -> pd.DataFrame:
     """DataFrame implementation of as_percentages."""
     axis = axes.resolve_axis(axis)
-    keys_to_ignore = _resolve_ignored_keys(df, axis, ignore_keys)
+    keys_to_ignore = chaining.resolve_ignored_keys(df, 'percentages', ignore_keys)
 
     cols = chaining.get_data_mask(df.columns, keys_to_ignore)
     data = df.loc[:, cols]
@@ -234,10 +226,13 @@ def _(
 
 
 # region add pct
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@chaining.tag_labels('percentages')
 @singledispatch
 def add_percentages(
     data,
     *args,
+    label_n: str = 'n',
     label_pct: str = 'pct',
     ndigits: int = -1,
     base: int = 1,
@@ -305,13 +300,12 @@ def add_percentages(
 
 
 @add_percentages.register
-@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
 def _(
     data: pd.Series,
     *,
     label_n: str = 'n',
     label_pct: str = 'pct',
-    label_totals: str|None = None,
+    label_totals: str | None = None,
     ndigits: int = -1,
     base: int = 1,
     apportioned_rounding: bool = True,
@@ -326,13 +320,11 @@ def _(
         base = base,
         apportioned_rounding = apportioned_rounding,
     )
-    output = pd.concat({label_n: data, label_pct: pcts}, axis=1)
-    return output
+    result = pd.concat([data.pipe(relabel, label_n), pcts], axis=1)
+    return result
 
 
 @add_percentages.register
-@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
-@chaining.tag_labels('percentages')
 def _(
     df: pd.DataFrame,
     axis: Axis = 2,
@@ -349,7 +341,7 @@ def _(
 ) -> pd.DataFrame:
     """DataFrame implementation of add_percentages."""
     axis = axes.resolve_axis(axis)
-    keys_to_ignore = _resolve_ignored_keys(df, axis, ignore_keys)
+    keys_to_ignore = chaining.resolve_ignored_keys(df, 'percentages', ignore_keys)
 
     cols = chaining.get_data_mask(df.columns, keys_to_ignore)
     data = df.loc[:, cols]
@@ -368,22 +360,22 @@ def _(
     if cols.all():
         # if not then add them, original table gets `label_n`
         # percentages get `label_pct` as key
-        output = pd.concat({label_n: df, label_pct: pcts}, axis=1)
+        result = pd.concat({label_n: df, label_pct: pcts}, axis=1)
     else:
         # if percentages are present then transform them first
         # keys are already present in the original df
         # so we do not add new keys
         pcts = pcts.rename(columns={label_n: label_pct})
-        output = pd.concat([df, pcts], axis=1)
+        result = pd.concat([df, pcts], axis=1)
     if interleaf:
-        # return output.stack(0).unstack(-1)
-        new_order = list(range(1, output.columns.nlevels)) + [0]
+        # return result.stack(0).unstack(-1)
+        new_order = list(range(1, result.columns.nlevels)) + [0]
         return (
-            output
+            result
             .reorder_levels(new_order, axis=1)
-            .pipe(tooling.reindex_by_levels, data)
+            .pipe(tooling.reindex_by_levels, data, axis=1)
         )
-    return output
+    return result
 
 
 # region rounding

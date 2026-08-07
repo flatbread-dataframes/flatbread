@@ -10,28 +10,6 @@ import flatbread.axes as axes
 import flatbread.chaining as chaining
 
 
-# region chaining
-def _resolve_ignored_keys(
-    data: pd.DataFrame|pd.Series,
-    axis: int,
-    ignore_keys: str|list[str]|None,
-):
-    keys_to_ignore = []
-
-    if isinstance(ignore_keys, str):
-        keys_to_ignore.append(ignore_keys)
-    elif isinstance(ignore_keys, list):
-        keys_to_ignore.extend(ignore_keys)
-
-    tracked = data.attrs.get('flatbread', {}).get('labels', {})
-    keys_to_ignore.extend(tracked.get('totals', []))
-    if axis == 1:
-        keys_to_ignore.extend(tracked.get('percentages', []))
-        keys_to_ignore.extend(tracked.get('differences', []))
-
-    return keys_to_ignore
-
-
 # region totals
 @tooling.inject_defaults(DEFAULTS['transforms']['totals'])
 @chaining.tag_labels('totals')
@@ -44,7 +22,7 @@ def add_totals(
     **kwargs,
 ) -> pd.DataFrame|pd.Series:
     axis = axes.resolve_axis(axis)
-    keys_to_ignore = _resolve_ignored_keys(data, axis, ignore_keys)
+    keys_to_ignore = chaining.resolve_ignored_keys(data, 'totals', ignore_keys)
 
     if axis < 2:
         output = agg.add_agg(
@@ -92,7 +70,7 @@ def _add_subtotals(
 ) -> pd.DataFrame|pd.Series:
     """Single-level subtotals implementation with tagging."""
     axis = axes.resolve_axis(axis)
-    keys_to_ignore = _resolve_ignored_keys(data, axis, ignore_keys)
+    keys_to_ignore = chaining.resolve_ignored_keys(data, 'subtotals', ignore_keys)
 
     if axis < 2:
         return agg.add_subagg(
