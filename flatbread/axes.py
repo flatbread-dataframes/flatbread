@@ -342,7 +342,7 @@ def add_value_to_key(
     level: int = 0,
 ) -> tuple[Any, ...]:
     """
-    Insert an value into a key (tuple or single value refering to a column position) at a specified level.
+    Insert a value into a key (tuple or single value refering to a column position) at a specified level.
 
     Parameters
     ----------
