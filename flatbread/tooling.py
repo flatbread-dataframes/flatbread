@@ -3,6 +3,7 @@ from typing import Any, Callable, TypeVar
 
 import pandas as pd
 
+from flatbread import axes
 from flatbread.types import Axis, Level
 
 
@@ -28,18 +29,22 @@ def handle_series_as_dataframe(func: Callable[..., pd.DataFrame]) -> Callable[..
     return wrapper
 
 
-def handle_axis_rotation(func) -> Callable:
-    """
-    Decorator that handles axis=1 by transposing before and after the operation.
-    """
+def handle_axis_rotation(
+    func: Callable[..., pd.DataFrame]
+) -> Callable[..., pd.DataFrame]:
+    """Decorator that handles axis=1 by transposing before and after the operation."""
+
     @wraps(func)
-    def wrapper(df, *args, **kwargs):
-        axis = kwargs.pop('axis', 0)
-        if axis in [1, 'columns']:
+    def wrapper(df: pd.DataFrame, *args, axis: Axis = 0, **kwargs) -> pd.DataFrame:
+        resolved = axes.resolve_axis(axis)
+        if resolved == 2:
+            raise ValueError("axis='both' not supported for this operation")
+        transpose = resolved == 1
+        if transpose:
             df = df.T
-            result = func(df, *args, **kwargs)
-            return result.T
-        return func(df, *args, **kwargs)
+        result = func(df, *args, axis=axis, **kwargs)
+        return result.T if transpose else result
+
     return wrapper
 
 
@@ -121,36 +126,41 @@ def sort_index_from_list(
 def reindex_by_levels(
     df_target: pd.DataFrame,
     df_reference: pd.DataFrame,
+    axis: Axis = 0,
     nlevels: int | None = None,
 ) -> pd.DataFrame:
-   """
-   Reindex df_target columns according to the level ordering in df_reference.
+    """
+    Reindex df_target along one axis according to the level ordering in df_reference.
 
-   Parameters
-   ----------
-   df_target : pd.DataFrame
-       DataFrame to reindex, with n+k levels in columns
-   df_reference : pd.DataFrame
-       Reference DataFrame with n levels in columns that define the ordering
-   nlevels : int or None, optional
-       Number of levels to reindex. If None, reindex all levels in df_reference.
-       If int, reindex only the first `levels` levels from df_reference.
+    Parameters
+    ----------
+    df_target : pd.DataFrame
+        DataFrame to reindex, with n+k levels on the target axis
+    df_reference : pd.DataFrame
+        Reference DataFrame with n levels on the same axis that define the ordering
+    axis : int, optional
+        Axis to reindex: 0 for index, 1 for columns.
+    nlevels : int or None, optional
+        Number of levels to reindex. If None, reindex all levels in df_reference.
+        If int, reindex only the first `nlevels` levels from df_reference.
 
-   Returns
-   -------
-   pd.DataFrame
-       df_target reindexed with specified column levels ordered as in df_reference
+    Returns
+    -------
+    pd.DataFrame
+        df_target reindexed with specified levels ordered as in df_reference
 
-   Notes
-   -----
-   Any additional levels in df_target beyond those reindexed are left unchanged.
-   """
-   df_reindexed = df_target.copy()
-   max_levels = df_reference.columns.nlevels if nlevels is None else nlevels
+    Notes
+    -----
+    Any additional levels in df_target beyond those reindexed are left unchanged.
+    """
+    ref_labels = df_reference.axes[axis]
+    max_levels = ref_labels.nlevels if nlevels is None else nlevels
 
-   for level in range(max_levels):
-       df_reindexed = df_reindexed.reindex(
-           columns=df_reference.columns.get_level_values(level).unique(),
-           level=level
-       )
-   return df_reindexed
+    result = df_target.copy()
+    for level in range(max_levels):
+        result = result.reindex(
+            ref_labels.get_level_values(level).unique(),
+            axis = axis,
+            level = level,
+        )
+    return result
