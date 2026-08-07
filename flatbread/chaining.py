@@ -4,9 +4,10 @@ from typing import Callable
 import pandas as pd
 
 from flatbread import DEFAULTS
+from flatbread.types import PandasObj
 
 
-def get_data_mask(index, ignore_keys):
+def get_data_mask(index: pd.Index, ignore_keys: list[str] | None):
     """
     Create a mask used for separating data from results of flatbread operations. The keys in `ignore_keys` determine which rows/columns need to be ignored. This can be used when chaining multiple flatbread operations.
 
@@ -47,6 +48,38 @@ def get_data_mask(index, ignore_keys):
         result = [should_keep(idx) for idx in index]
 
     return pd.Series(result, index=index)
+
+
+def resolve_ignored_keys(data, transform_name, ignore_keys=None):
+    """
+    Collect keys to ignore for a transform based on config and tracked labels.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        Data with potential flatbread labels in attrs.
+    transform_name : str
+        Name of the current transform (e.g. 'totals', 'differences').
+    ignore_keys : str | list[str] | None
+        Additional keys to ignore, passed by the user.
+
+    Returns
+    -------
+    list[str]
+        Combined list of keys to ignore.
+    """
+    keys_to_ignore = []
+    if isinstance(ignore_keys, str):
+        keys_to_ignore.append(ignore_keys)
+    elif isinstance(ignore_keys, list):
+        keys_to_ignore.extend(ignore_keys)
+
+    tracked = data.attrs.get('flatbread', {}).get('labels', {})
+    to_ignore = DEFAULTS['transforms'].get(transform_name, {}).get('ignore_transforms', [])
+    for transform in to_ignore:
+        keys_to_ignore.extend(tracked.get(transform, []))
+
+    return keys_to_ignore
 
 
 def tag_labels(transform: str) -> Callable:
@@ -102,7 +135,7 @@ def tag_labels(transform: str) -> Callable:
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(df: pd.DataFrame, *args, **kwargs) -> pd.DataFrame:
+        def wrapper(data: PandasObj, *args, **kwargs) -> PandasObj:
             # Get transform configuration from transforms section
             transform_config = DEFAULTS.get('transforms', {}).get(transform, {})
             key_label_params = transform_config.get('key_labels', [])
@@ -114,7 +147,7 @@ def tag_labels(transform: str) -> Callable:
                     labels_to_track.append(kwargs[param_name])
 
             # Execute the original function
-            result = func(df, *args, **kwargs)
+            result = func(data, *args, **kwargs)
 
             # Get existing tracked labels for this transform
             existing_labels = get_nested_key(
