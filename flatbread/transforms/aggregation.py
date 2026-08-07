@@ -115,7 +115,7 @@ def add_agg(
     label = get_label(label, aggfunc)
     rows = chaining.get_data_mask(data.index, ignore_keys)
 
-    agged = data.loc[rows].agg(aggfunc, *args, **kwargs)
+    agged = data.loc[rows].agg(aggfunc)
     new_row = create_agg_row(
         agged,
         label = label,
@@ -189,7 +189,7 @@ def _subagg_implementation(
 
             rows = chaining.get_data_mask(group.index, ignore_keys)
             if sum(rows) > (1 if skip_single_rows else 0):
-                subagged = group.loc[rows].agg(aggfunc, *args, **kwargs)
+                subagged = group.loc[rows].agg(aggfunc)
                 new_row = create_agg_row(
                     subagged,
                     subtotal_label,
