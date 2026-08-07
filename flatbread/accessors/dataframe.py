@@ -6,6 +6,7 @@ import pandas as pd
 import flatbread.transforms.percentages as pct
 import flatbread.transforms.aggregation as agg
 import flatbread.transforms.totals as totals
+import flatbread.transforms.differences as diffs
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.output.html import PitaDisplayMixin
@@ -117,11 +118,11 @@ class PitaFrame(PitaDisplayMixin):
     def as_percentages(
         self,
         axis: Axis = 2,
-        label_totals: str|None = None,
-        ignore_keys: str|list[str]|None = None,
-        ndigits: int|None = None,
+        label_totals: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        ndigits: int | None = None,
         base: int = 1,
-        apportioned_rounding: bool|None = None,
+        apportioned_rounding: bool | None = None,
     ) -> pd.DataFrame:
         """
         Transform data to percentages based on specified axis.
@@ -166,13 +167,13 @@ class PitaFrame(PitaDisplayMixin):
     def add_percentages(
         self,
         axis: Axis = 2,
-        label_n: str|None = None,
-        label_pct: str|None = None,
-        label_totals: str|None = None,
-        ignore_keys: str|list[str]|None = None,
-        ndigits: int|None = None,
+        label_n: str | None = None,
+        label_pct: str | None = None,
+        label_totals: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        ndigits: int | None = None,
         base: int = 1,
-        apportioned_rounding: bool|None = None,
+        apportioned_rounding: bool | None = None,
         interleaf: bool = False,
     ) -> pd.DataFrame:
         """
@@ -350,6 +351,99 @@ class PitaFrame(PitaDisplayMixin):
         self
     ):
         return totals.drop_totals(self._obj)
+
+    # region diffs
+    def as_differences(
+        self,
+        axis: Axis = 0,
+        periods: int = 1,
+        method: diffs.DiffMethods = 'diff',
+    ) -> pd.DataFrame:
+        """
+        Transform data to differences based on specified axis.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Input data.
+        periods : int
+            Number of periods to shift.
+        method : {'diff', 'pct_change'}
+            Differencing method to apply.
+        axis : {0, 1, 'index', 'columns'}
+            Axis along which to compute diffs. 0 for rows, 1 for columns.
+        label_diff : str
+            Label for the difference data.
+
+        Returns
+        -------
+        pd.DataFrame
+            Differenced data with consumed periods removed. Fewer rows
+            (axis=0) or columns (axis=1) than the input.
+        """
+        return diffs.as_differences(
+            self._obj,
+            axis = axis,
+            periods = periods,
+            method = method,
+        )
+
+    def as_diffs(self,  *args, **kwargs) -> pd.DataFrame:
+        return self.as_diffs(*args, **kwargs)
+
+    def add_differences(
+        self,
+        axis: Axis = 0,
+        periods: int = 1,
+        method: diffs.DiffMethods = 'diff',
+        label_n: str = 'n',
+        label_diff: str = 'diff',
+        ignore_keys: str | list[str] | None = None,
+        interleaf: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Add differences alongside original DataFrame data.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Input data.
+        axis : {0, 1, 'index', 'columns'}
+            Axis along which to compute diffs.
+        periods : int
+            Number of periods to shift.
+        method : {'diff', 'pct_change'}
+            Differencing method to apply.
+        label_n : str
+            Label for the original data panel.
+        label_diff : str
+            Label for the difference panel.
+        interleaf : bool
+            If True, interleave diff columns with their corresponding data
+            columns instead of appending as a separate panel.
+        ignore_keys : str or list[str] or None
+            Additional keys to exclude from diff computation. Keys from
+            prior flatbread operations are excluded automatically.
+
+        Returns
+        -------
+        pd.DataFrame
+            Combined data with differences added. Adds one level to the
+            column index to distinguish data from diffs.
+        """
+        return diffs.add_differences(
+            self._obj,
+            axis = axis,
+            periods = periods,
+            method = method,
+            label_n = label_n,
+            label_diff = label_diff,
+            ignore_keys = ignore_keys,
+            interleaf = interleaf,
+        )
+
+    def add_diffs(self, *args, **kwargs):
+        return self.add_differences(*args, **kwargs)
 
     # region io
     def export_excel(
