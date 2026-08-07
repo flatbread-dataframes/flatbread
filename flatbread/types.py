@@ -1,4 +1,7 @@
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, TypeVar
+import pandas as pd
 
-Axis: TypeAlias = int | Literal["index", "columns", "both"] | None
+
+PandasObj = TypeVar('PandasObj', pd.DataFrame, pd.Series)
+Axis: TypeAlias = Literal[0, 1, 2, 'index', 'columns', 'rows', 'both'] | None
 Level: TypeAlias = int | str
