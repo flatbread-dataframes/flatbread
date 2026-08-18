@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pandas as pd
 
-import flatbread.transforms.percentages as pct
-import flatbread.transforms.aggregation as agg
-import flatbread.transforms.totals as totals
-import flatbread.transforms.differences as diffs
+import flatbread.transforms.panels.percentages as pct
+import flatbread.transforms.aggregation.aggregation as agg
+import flatbread.transforms.aggregation.totals as totals
+import flatbread.transforms.panels.differences as diffs
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.output.html import PitaDisplayMixin
@@ -113,117 +113,6 @@ class PitaFrame(PitaDisplayMixin):
             skip_single_rows = skip_single_rows,
             _fill = _fill,
         )
-
-    #region percentages
-    def as_percentages(
-        self,
-        axis: Axis = 2,
-        label_totals: str | None = None,
-        ignore_keys: str | list[str] | None = None,
-        ndigits: int | None = None,
-        base: int = 1,
-        apportioned_rounding: bool | None = None,
-    ) -> pd.DataFrame:
-        """
-        Transform data to percentages based on specified axis.
-
-        Parameters
-        ----------
-        data (pd.DataFrame):
-            The input DataFrame.
-        axis (int | Literal["index", "columns", "both"]):
-            The axis along which percentages are calculated. Percentages are based on:
-            - when axis is 2 then grand total
-            - when axis is 1 then column totals
-            - when axis is 0 then row totals
-            Default is 2.
-        label_totals (str|None):
-            Label of the totals column/row. If no label is supplied then totals will be assumed to be either the last row, last column or last row/column field. Default is None.
-        ignore_keys (str|list[str]|None):
-            Keys of rows/columns to ignore when calculating percentages.
-        ndigits (int):
-            Number of decimal places to round the percentages. Default is -1 (no rounding).
-        base (int):
-            The whole quantity against which to calculate the fraction.
-
-        Returns
-        -------
-        pd.DataFrame:
-            DataFrame with data transformed to percentages.
-        """
-        return pct.as_percentages(
-            self._obj,
-            axis = axis,
-            label_totals = label_totals,
-            ignore_keys = ignore_keys,
-            ndigits = ndigits,
-            base = base,
-            apportioned_rounding = apportioned_rounding,
-        )
-
-    def as_pct(self, *args, **kwargs):
-        return self.as_percentages(*args, **kwargs)
-
-    def add_percentages(
-        self,
-        axis: Axis = 2,
-        label_n: str | None = None,
-        label_pct: str | None = None,
-        label_totals: str | None = None,
-        ignore_keys: str | list[str] | None = None,
-        ndigits: int | None = None,
-        base: int = 1,
-        apportioned_rounding: bool | None = None,
-        interleaf: bool = False,
-    ) -> pd.DataFrame:
-        """
-        Add percentage columns to a DataFrame based on specified axis.
-
-        Parameters
-        ----------
-        data (pd.DataFrame):
-            The input DataFrame.
-        axis (int | Literal["index", "columns", "both"]):
-            The axis along which percentages are calculated. Percentages are based on:
-            - when axis is 2 then grand total
-            - when axis is 1 then row totals
-            - when axis is 0 then column totals
-            Default is 2.
-        label_n (str):
-            Label for the original count columns. Default is 'n'.
-        label_pct (str):
-            Label for the percentage columns. Default is 'pct'.
-        label_totals (str|None):
-            Label of the totals column/row. If no label is supplied then totals will be assumed to be either the last row, last column or last row/column field. Default is None.
-        ignore_keys (str|list[str]|None):
-            Keys of rows/columns to ignore when calculating percentages.
-        ndigits (int):
-            Number of decimal places to round the percentages. Default is -1 (no rounding).
-        base (int):
-            The whole quantity against which to calculate the fraction.
-        interleaf (bool):
-            If `interleaf` is True then percentages columns will be placed next to count columns. If set to False the percentages columns will have their own separate block in the table. Default is False.
-
-        Returns
-        -------
-        pd.DataFrame:
-            DataFrame with additional columns for percentages.
-        """
-        return pct.add_percentages(
-            self._obj,
-            axis = axis,
-            label_n = label_n,
-            label_pct = label_pct,
-            label_totals = label_totals,
-            ignore_keys = ignore_keys,
-            ndigits = ndigits,
-            base = base,
-            apportioned_rounding = apportioned_rounding,
-            interleaf = interleaf,
-        )
-
-    def add_pct(self, *args, **kwargs):
-        return self.add_percentages(*args, **kwargs)
 
     #region totals
     def add_totals(
@@ -352,6 +241,117 @@ class PitaFrame(PitaDisplayMixin):
     ):
         return totals.drop_totals(self._obj)
 
+    #region percentages
+    def as_percentages(
+        self,
+        axis: Axis = 2,
+        label_totals: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        ndigits: int | None = None,
+        base: int = 1,
+        apportioned_rounding: bool | None = None,
+    ) -> pd.DataFrame:
+        """
+        Transform data to percentages based on specified axis.
+
+        Parameters
+        ----------
+        data (pd.DataFrame):
+            The input DataFrame.
+        axis (int | Literal["index", "columns", "both"]):
+            The axis along which percentages are calculated. Percentages are based on:
+            - when axis is 2 then grand total
+            - when axis is 1 then column totals
+            - when axis is 0 then row totals
+            Default is 2.
+        label_totals (str|None):
+            Label of the totals column/row. If no label is supplied then totals will be assumed to be either the last row, last column or last row/column field. Default is None.
+        ignore_keys (str|list[str]|None):
+            Keys of rows/columns to ignore when calculating percentages.
+        ndigits (int):
+            Number of decimal places to round the percentages. Default is -1 (no rounding).
+        base (int):
+            The whole quantity against which to calculate the fraction.
+
+        Returns
+        -------
+        pd.DataFrame:
+            DataFrame with data transformed to percentages.
+        """
+        return pct.as_percentages(
+            self._obj,
+            axis = axis,
+            label_totals = label_totals,
+            ignore_keys = ignore_keys,
+            ndigits = ndigits,
+            base = base,
+            apportioned_rounding = apportioned_rounding,
+        )
+
+    def as_pct(self, *args, **kwargs):
+        return self.as_percentages(*args, **kwargs)
+
+    def add_percentages(
+        self,
+        axis: Axis = 2,
+        label_n: str | None = None,
+        label_pct: str | None = None,
+        label_totals: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        ndigits: int | None = None,
+        base: int = 1,
+        apportioned_rounding: bool | None = None,
+        interleaf: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Add percentage columns to a DataFrame based on specified axis.
+
+        Parameters
+        ----------
+        data (pd.DataFrame):
+            The input DataFrame.
+        axis (int | Literal["index", "columns", "both"]):
+            The axis along which percentages are calculated. Percentages are based on:
+            - when axis is 2 then grand total
+            - when axis is 1 then row totals
+            - when axis is 0 then column totals
+            Default is 2.
+        label_n (str):
+            Label for the original count columns. Default is 'n'.
+        label_pct (str):
+            Label for the percentage columns. Default is 'pct'.
+        label_totals (str|None):
+            Label of the totals column/row. If no label is supplied then totals will be assumed to be either the last row, last column or last row/column field. Default is None.
+        ignore_keys (str|list[str]|None):
+            Keys of rows/columns to ignore when calculating percentages.
+        ndigits (int):
+            Number of decimal places to round the percentages. Default is -1 (no rounding).
+        base (int):
+            The whole quantity against which to calculate the fraction.
+        interleaf (bool):
+            If `interleaf` is True then percentages columns will be placed next to count columns. If set to False the percentages columns will have their own separate block in the table. Default is False.
+
+        Returns
+        -------
+        pd.DataFrame:
+            DataFrame with additional columns for percentages.
+        """
+        return pct.add_percentages(
+            self._obj,
+            axis = axis,
+            label_n = label_n,
+            label_pct = label_pct,
+            label_totals = label_totals,
+            ignore_keys = ignore_keys,
+            ndigits = ndigits,
+            base = base,
+            apportioned_rounding = apportioned_rounding,
+            interleaf = interleaf,
+        )
+
+    def add_pct(self, *args, **kwargs):
+        return self.add_percentages(*args, **kwargs)
+
     # region diffs
     def as_differences(
         self,
@@ -389,7 +389,7 @@ class PitaFrame(PitaDisplayMixin):
         )
 
     def as_diffs(self,  *args, **kwargs) -> pd.DataFrame:
-        return self.as_diffs(*args, **kwargs)
+        return self.as_differences(*args, **kwargs)
 
     def add_differences(
         self,
@@ -516,3 +516,57 @@ class PitaFrame(PitaDisplayMixin):
             level_name = level_name,
             axis = axis,
         )
+
+    # region interleave
+    def interleave(self) -> pd.DataFrame:
+        """
+        Interleave panel columns with data columns.
+
+        Reads panel type from attrs and dispatches to the correct
+        interleave implementation. Only works when all panels are
+        of the same type.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with interleaved columns.
+
+        Raises
+        ------
+        ValueError
+            If no panels exist, panels are mixed type, or DataFrame
+            is already interleaved.
+        """
+        from flatbread.transforms.panels import percentages, differences
+        from flatbread.transforms.chaining import get_nested_key, set_nested_key
+
+        data = self._obj
+
+        if get_nested_key(data.attrs, ['flatbread', 'interleaved']):
+            raise ValueError("DataFrame is already interleaved.")
+
+        panels = get_nested_key(data.attrs, ['flatbread', 'panels'])
+        if panels is None:
+            raise ValueError("No panels to interleave.")
+
+        types = {v['type'] for k, v in panels.items() if k != 'n'}
+        if not types:
+            raise ValueError("No panels to interleave.")
+        if len(types) > 1:
+            raise ValueError(
+                f"Cannot interleave mixed panel types: {', '.join(sorted(types))}."
+            )
+
+        panel_type = types.pop()
+        dispatch = {
+            'percentages': percentages.interleave,
+            'differences': differences.interleave,
+        }
+
+        func = dispatch.get(panel_type)
+        if func is None:
+            raise ValueError(f"No interleave implementation for '{panel_type}'.")
+
+        result = func(data)
+        set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
+        return result

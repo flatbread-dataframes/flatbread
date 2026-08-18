@@ -3,7 +3,7 @@ from random import randint
 
 import pandas as pd
 
-import flatbread.transforms.percentages as pcts
+import flatbread.transforms.panels.percentages as pcts
 from flatbread.testing.dataframe import make_test_df
 
 

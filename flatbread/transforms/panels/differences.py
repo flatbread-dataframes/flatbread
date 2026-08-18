@@ -7,7 +7,8 @@ import pandas as pd
 
 from flatbread import DEFAULTS
 from flatbread.types import Axis, Level
-import flatbread.chaining as chaining
+import flatbread.transforms.chaining as chaining
+import flatbread.transforms.panels.state as state
 import flatbread.tooling as tooling
 import flatbread.axes as axes
 
@@ -17,7 +18,7 @@ type DiffMethods = Literal['diff', 'pct_change']
 
 # region as diff
 @tooling.inject_defaults(DEFAULTS['transforms']['differences'])
-@chaining.tag_labels('differences')
+@chaining.track_margin_labels('differences')
 @singledispatch
 def as_differences(
     data,
@@ -146,7 +147,6 @@ def _(
 
 # region add diff
 @tooling.inject_defaults(DEFAULTS['transforms']['differences'])
-@chaining.tag_labels('differences')
 @singledispatch
 def add_differences(
     data,
@@ -224,7 +224,9 @@ def _(
         Two-column DataFrame with original values and differences.
     """
     diffs = as_differences(data, periods=periods, method=method, label_diff=label_diff)
-    return pd.concat([data.pipe(relabel, label_n), diffs], axis=1)
+    result = pd.concat([data.pipe(relabel, label_n), diffs], axis=1)
+    state.register_panel(result, label_diff, 'percentages', axis=0)
+    return result
 
 
 @add_differences.register
@@ -241,75 +243,83 @@ def _(
     **kwargs,
 ) -> pd.DataFrame:
     """
-    Add differences alongside original DataFrame data.
+    Add differences alongside original DataFrame data in a paneled layout.
 
-    Computes differences on the data portion (excluding columns or rows
-    from prior flatbread operations) and combines with the original.
-    Supports chaining: when prior differences exist, new diffs are
-    appended without re-wrapping the existing structure.
+    Computes differences from the original data (ignoring any prior
+    flatbread panels) and appends them as a new panel. On the first
+    panel transform the data is also wrapped under a ``label_n`` panel;
+    subsequent transforms append without re-wrapping.
 
     Parameters
     ----------
     data : pd.DataFrame
-        Input data.
-    axis : {0, 1, 'index', 'columns'}
-        Axis along which to compute diffs.
+        Input DataFrame.
+    axis : Axis
+        Axis along which to compute differences:
+        - 0 or ``'index'``: row-wise differences
+        - 1 or ``'columns'``: column-wise differences
     periods : int
-        Number of periods to shift.
+        Number of periods to shift for computing the difference.
     method : {'diff', 'pct_change'}
         Differencing method to apply.
     label_n : str
         Label for the original data panel.
     label_diff : str
-        Label for the difference panel.
-    interleaf : bool
-        If True, interleave diff columns with their corresponding data
-        columns instead of appending as a separate panel.
+        Label for the difference panel. When equal to the configured
+        default, an axis suffix is appended automatically (e.g.
+        ``'diff_row'``). A custom value is used as-is.
     ignore_keys : str or list[str] or None
         Additional keys to exclude from diff computation. Keys from
         prior flatbread operations are excluded automatically.
+    interleaf : bool
+        If True, interleave diff columns with data columns and mark
+        the DataFrame as interleaved.
 
     Returns
     -------
     pd.DataFrame
-        Combined data with differences added. Adds one level to the
-        column index to distinguish data from diffs.
+        DataFrame with difference panel appended.
+
+    Raises
+    ------
+    ValueError
+        If a panel with the resolved label already exists or if the
+        DataFrame has already been interleaved.
     """
-    keys_to_ignore = chaining.resolve_ignored_keys(data, 'differences', ignore_keys)
     axis_resolved = axes.resolve_axis(axis)
 
-    if axis_resolved == 1:
-        mask = chaining.get_data_mask(data.columns, keys_to_ignore)
-        source = data.loc[:, mask]
-    else:
-        mask = chaining.get_data_mask(data.index, keys_to_ignore)
-        source = data.loc[mask]
+    # resolve panel label
+    config_default = DEFAULTS['transforms']['differences']['label_diff']
+    if label_diff == config_default:
+        label_diff = resolve_panel_label(label_diff, axis_resolved)
 
+    # check state and resolve data
+    source = state.check_panel_state(data, label_diff)
+
+    # compute differences
     diffs = as_differences(
-        data,
+        source,
         axis=axis,
         periods=periods,
         method=method,
         label_diff=label_diff,
+        ignore_keys=ignore_keys,
     )
-    if mask.all():
+
+    # build paneled output
+    panels = chaining.get_nested_key(data.attrs, ['flatbread', 'panels'])
+    if panels is None:
         result = pd.concat({label_n: data, label_diff: diffs}, axis=1)
     else:
         result = pd.concat([data, pd.concat({label_diff: diffs}, axis=1)], axis=1)
 
+    # register panel
+    state.register_panel(result, label_diff, 'differences', axis_resolved)
+
+    # interleave
     if interleaf:
-        new_order = list(range(1, result.columns.nlevels))
-        new_order.insert(-1, 0)
-        result = (
-            result
-            .reorder_levels(new_order, axis=1)
-            .pipe(
-                tooling.reindex_by_levels,
-                data,
-                axis = 1,
-                nlevels = result.columns.nlevels - 2,
-            )
-        )
+        result = interleave(result)
+        chaining.set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
 
     return result
 
@@ -391,3 +401,52 @@ def _pair(index, periods: int):
     if periods > 0:
         return zip(index, index[n:])
     return zip(index[n:], index)
+
+
+def resolve_panel_label(label: str, axis: Axis) -> str:
+    suffix = DEFAULTS['panels']['axis_suffixes'][str(axis)]
+    return f"{label}_{suffix}"
+
+
+# region interleave
+def interleave(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Interleave difference panel columns with data columns.
+
+    For axis=0 diffs (symmetric panels), groups each original column
+    with its diff counterpart. For axis=1 diffs (pairwise labels),
+    places each diff between the two columns it compares.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Paneled DataFrame with difference columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with interleaved columns.
+    """
+    panels = chaining.get_nested_key(df.attrs, ['flatbread', 'panels']) or {}
+    data_label = next(k for k, v in panels.items() if v['type'] == 'data')
+    diff_meta = next(v for k, v in panels.items() if v['type'] == 'differences')
+    reference = df[data_label]
+
+    if diff_meta['axis'] == 0:
+        new_order = list(range(1, df.columns.nlevels)) + [0]
+        nlevels = None
+    else:
+        new_order = list(range(1, df.columns.nlevels))
+        new_order.insert(-1, 0)
+        nlevels = reference.columns.nlevels - 1
+
+    return (
+        df
+        .reorder_levels(new_order, axis=1)
+        .pipe(
+            tooling.reindex_by_levels,
+            reference,
+            axis=1,
+            nlevels=nlevels,
+        )
+    )

@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pandas as pd
 
-import flatbread.transforms.percentages as pct
-import flatbread.transforms.aggregation as agg
-import flatbread.transforms.totals as totals
+import flatbread.transforms.panels.percentages as pct
+import flatbread.transforms.aggregation.aggregation as agg
+import flatbread.transforms.aggregation.totals as totals
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.output.html import PitaDisplayMixin

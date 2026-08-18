@@ -18,14 +18,19 @@
             "label_pct": "pct",
             "ndigits": -1,
             "base": 1,
-            "key_labels": ["label_pct"],
             "ignore_transforms": ["percentages"]
         },
         "differences": {
             "label_n": "n",
             "label_diff": "diff",
-            "key_labels": ["label_diff"],
             "ignore_transforms": ["totals", "percentages", "differences"]
+        }
+    },
+    "panels": {
+        "axis_suffixes": {
+            "0": "col",
+            "1": "row",
+            "2": "total"
         }
     },
     "locale": null,
@@ -35,7 +40,7 @@
             "html_options": {
                 "style": "percent",
                 "minimumFractionDigits": 0,
-                "maximumFractionDigits": 21
+                "maximumFractionDigits": 1
             },
             "excel_format": "0.0%"
         },

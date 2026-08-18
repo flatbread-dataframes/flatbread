@@ -1,0 +1,500 @@
+from dataclasses import dataclass
+from functools import singledispatch
+from typing import Any
+
+import pandas as pd
+
+from flatbread import DEFAULTS
+from flatbread.types import Axis, Level
+import flatbread.transforms.chaining as chaining
+import flatbread.transforms.panels.state as state
+import flatbread.tooling as tooling
+import flatbread.axes as axes
+
+
+# region vals 'n totes
+@dataclass
+class ValuesAndTotals:
+    values: pd.DataFrame
+    totals: pd.Series | int | float
+    axis: int
+
+    @classmethod
+    def from_data(
+        cls,
+        data: pd.DataFrame,
+        axis: Axis,
+        label_totals: str|None = None,
+    ) -> 'ValuesAndTotals':
+        """
+        Create ValuesAndTotals by splitting input data based on axis and totals location.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Input data containing both values and totals
+        axis : Axis
+            Axis along which to split data and totals
+        label_totals : str | None
+            Label of the totals row/column. If None, assumes totals are in the last position
+
+        Returns
+        -------
+        ValuesAndTotals
+            Instance with separated values and totals
+        """
+        axis_resolved = axes.resolve_axis(axis)
+
+        if label_totals is None:
+            if axis_resolved == 0:  # column totals in last row
+                values = data.iloc[:-1, :]
+                totals = data.iloc[-1, :]
+            elif axis_resolved == 1:  # row totals in last column
+                values = data.iloc[:, :-1]
+                totals = data.iloc[:, -1]
+            else:  # grand total in bottom-right corner
+                values = data.iloc[:-1, :-1]
+                totals = data.iloc[-1, -1]
+        else:
+            # if label_totals is given:
+            if axis_resolved == 0:  # column totals in specified row
+                values = data.drop(label_totals, axis=0)
+                totals = data.loc[label_totals, :]
+            elif axis_resolved == 1:  # row totals in specified column
+                values = data.drop(label_totals, axis=1)
+                totals = data.loc[:, label_totals]
+            else:  # grand total at specified row/column intersection
+                values = data.drop(label_totals, axis=0).drop(label_totals, axis=1)
+                totals = data.loc[label_totals, label_totals]
+
+        return cls(
+            values = values,
+            totals = totals, # type: ignore
+            axis = axis_resolved,
+        )
+
+    @property
+    def should_use_apportioned_rounding(self) -> bool:
+        """Check if values represent complete proportions of totals."""
+        tolerance = 1e-10
+
+        if self.axis == 0:  # column percentages
+            column_sums = self.values.sum(axis=0)
+            return (abs(column_sums - self.totals) < tolerance).all() # type: ignore
+        elif self.axis == 1:  # row percentages
+            row_sums = self.values.sum(axis=1)
+            return (abs(row_sums - self.totals) < tolerance).all() # type: ignore
+        else:  # axis == 2, grand total
+            return abs(self.values.sum().sum() - self.totals) < tolerance
+
+
+#region labels
+def relabel(s: pd.Series, name: str) -> pd.Series:
+    match s.name:
+        case tuple() as t:
+            new_name = (*t, name)
+        case _:
+            new_name = (s.name, name)
+    return s.rename(new_name)
+
+
+def resolve_panel_label(label: str, axis: Axis) -> str:
+    suffix = DEFAULTS['panels']['axis_suffixes'][str(axis)]
+    return f"{label}_{suffix}"
+
+
+# region as pct
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@chaining.track_margin_labels('percentages')
+@singledispatch
+def as_percentages(
+    data,
+    *args,
+    label_pct: str = 'pct',
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool = True,
+    **kwargs,
+) -> Any:
+    """
+    Transform data to percentages based on specified axis.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        The input data containing values and totals.
+    axis : int | Literal["index", "columns", "both"], optional
+        The axis along which percentages are calculated (DataFrame only):
+        - 0 or "index": percentages based on column totals
+        - 1 or "columns": percentages based on row totals
+        - 2 or "both": percentages based on grand total
+        Default is 2.
+    label_totals : str | None, optional
+        Label of the totals row/column. If None, assumes totals are in the last
+        position. Default is None.
+    ignore_keys : str | list[str] | None, optional
+        Keys of rows/columns to ignore when calculating percentages (DataFrame only).
+    ndigits : int, optional
+        Number of decimal places to round percentages. Default is -1 (no rounding).
+    base : int, optional
+        The whole quantity against which to calculate the fraction. Default is 1.
+    apportioned_rounding : bool | None, optional
+        Whether to use apportioned rounding that ensures percentages sum to the base.
+        If None, uses heuristic: apportioned rounding when data represents complete
+        proportions of totals. Default is None.
+
+    Returns
+    -------
+    pd.DataFrame | pd.Series
+        Data transformed to percentages.
+
+    Notes
+    -----
+    When `apportioned_rounding` is None, the function automatically determines whether
+    to use apportioned rounding by checking if the data values sum to their corresponding totals within floating-point tolerance (1e-10).
+    """
+    raise NotImplementedError('No implementation for this type')
+
+
+@as_percentages.register
+def _(
+    data: pd.Series,
+    *,
+    label_pct: str = 'pct',
+    label_totals: str|None = None,
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool|None = None,
+    **kwargs,
+) -> pd.Series:
+    """Series implementation of as_percentages."""
+    total = data.iloc[-1] if label_totals is None else data.loc[label_totals]
+
+    pcts = (
+        data
+        .div(total)
+        .mul(base)
+        .pipe(relabel, label_pct)
+    )
+
+    if ndigits == -1:
+        return pcts
+
+    if apportioned_rounding is None:
+        # check if values sum to total (complete proportions)
+        if label_totals is None:
+            values = data.iloc[:-1]
+        else:
+            values = data.drop(label_totals)
+        apportioned_rounding = abs(values.sum() - total) < 1e-10
+
+    rounding = round_apportioned if apportioned_rounding else round
+    return pcts.pipe(rounding, ndigits=ndigits) # type: ignore
+
+
+@as_percentages.register
+def _(
+    df: pd.DataFrame,
+    axis: Axis = 2,
+    *,
+    label_totals: str|None = None,
+    ignore_keys: str|list[str]|None = None,
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool|None = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """DataFrame implementation of as_percentages."""
+    axis = axes.resolve_axis(axis)
+    keys_to_ignore = chaining.resolve_ignored_keys(df, 'percentages', ignore_keys)
+
+    cols = chaining.get_data_mask(df.columns, keys_to_ignore)
+    data = df.loc[:, cols]
+    vt = ValuesAndTotals.from_data(data, axis, label_totals)
+
+    # reverse axis for consistency
+    axis = 0 if axis == 1 else 1 if axis == 0 else None
+    pcts = (
+        data # type: ignore
+        .div(vt.totals, axis=axis)
+        .mul(base)
+    )
+
+    if ndigits < 0:
+        return pcts
+
+    if apportioned_rounding is None:
+        apportioned_rounding = vt.should_use_apportioned_rounding
+
+    rounding = round_apportioned if apportioned_rounding else round
+
+    return pcts.pipe(rounding, ndigits=ndigits) # type: ignore
+
+
+# region add pct
+@tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
+@singledispatch
+def add_percentages(
+    data,
+    *args,
+    label_n: str = 'n',
+    label_pct: str | None = None,
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool = True,
+    **kwargs,
+) -> Any:
+    """
+    Add percentage columns alongside original data based on calculated proportions.
+
+    This function creates a side-by-side display with the original data columns
+    and corresponding percentage columns. For DataFrames, percentages can be
+    calculated relative to row totals, column totals, or grand total. For Series,
+    percentages are calculated relative to a designated total value.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        Input data containing values for percentage calculation.
+    axis : int | Literal["index", "columns", "both"], optional
+        The axis along which percentages are calculated (DataFrame only):
+        - 0 or "index": percentages based on column totals
+        - 1 or "columns": percentages based on row totals
+        - 2 or "both": percentages based on grand total
+        Default is 2.
+    label_n : str, optional
+        Label for the original data columns/column. Default is 'n'.
+    label_pct : str, optional
+        Label for the percentage columns/column. Default is 'pct'.
+    label_totals : str | None, optional
+        Label identifying the totals row/column. If None, assumes totals are in
+        the last position. Default is None.
+    ignore_keys : str | list[str] | None, optional
+        Keys of rows/columns to exclude from percentage calculations (DataFrame only).
+    ndigits : int, optional
+        Number of decimal places for rounding. Use -1 for no rounding. Default is -1.
+    base : int, optional
+        The base value for percentage calculation (e.g., 1 for proportions,
+        100 for percentages). Default is 1.
+    apportioned_rounding : bool | None, optional
+        Whether to use apportioned rounding that ensures percentages sum to the base.
+        If None, uses heuristic based on whether data represents complete proportions.
+        Default varies by implementation.
+    interleaf : bool, optional
+        Whether to interleave percentage columns with original columns rather than
+        grouping them separately (DataFrame only). Default is False.
+
+    Returns
+    -------
+    pd.DataFrame
+        Original data with additional percentage columns. For Series input, returns
+        DataFrame with both original and percentage columns.
+
+    Notes
+    -----
+    The function uses apportioned rounding when data represents complete proportions
+    of totals to ensure percentages sum exactly to the base value. This is
+    automatically detected when `apportioned_rounding` is None by checking if
+    values sum to their totals within floating-point tolerance (1e-10).
+
+    See Also
+    --------
+    as_percentages : Transform data to percentages without preserving originals
+    """
+    raise NotImplementedError('No implementation for this type')
+
+
+@add_percentages.register
+def _(
+    data: pd.Series,
+    *,
+    label_n: str = 'n',
+    label_pct: str = 'pct',
+    label_totals: str | None = None,
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool = True,
+    **kwargs,
+) -> pd.DataFrame:
+    """Series implementation of add_percentages."""
+    pcts = data.pipe(
+        as_percentages,
+        label_pct = label_pct,
+        label_totals = label_totals,
+        ndigits = ndigits,
+        base = base,
+        apportioned_rounding = apportioned_rounding,
+    )
+    result = pd.concat([data.pipe(relabel, label_n), pcts], axis=1)
+    chaining.register_panel(result, label_pct, 'percentages', axis=0)
+    return result
+
+
+@add_percentages.register
+def _(
+    data: pd.DataFrame,
+    axis: Axis = 2,
+    *,
+    label_n: str = 'n',
+    label_pct: str = 'pct',
+    label_totals: str | None = None,
+    ignore_keys: str | list[str] | None = None,
+    ndigits: int = -1,
+    base: int = 1,
+    apportioned_rounding: bool | None = None,
+    interleaf: bool = False,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Add percentage columns alongside original data in a paneled layout.
+
+    Computes percentages from the original data columns (ignoring any
+    prior flatbread panels) and appends them as a new panel. On the
+    first panel transform the data is also wrapped under a ``label_n``
+    panel; subsequent transforms append without re-wrapping.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame containing values for percentage calculation.
+    axis : Axis
+        Axis along which percentages are calculated:
+        - 0 or ``'index'``: column totals
+        - 1 or ``'columns'``: row totals
+        - 2 or ``'both'``: grand total
+    label_n : str
+        Label for the original data panel.
+    label_pct : str
+        Label for the percentage panel. When equal to the configured
+        default, an axis suffix is appended automatically (e.g.
+        ``'pct_col'``). A custom value is used as-is.
+    label_totals : str or None
+        Label identifying the totals row/column. If None, totals are
+        assumed to be in the last position.
+    ignore_keys : str or list[str] or None
+        Additional keys to exclude from percentage calculation. Keys
+        from prior flatbread operations are excluded automatically.
+    ndigits : int
+        Number of decimal places for rounding. Use -1 for no rounding.
+    base : int
+        Base value for percentage calculation (1 for proportions,
+        100 for percentages).
+    apportioned_rounding : bool or None
+        Whether to use apportioned rounding ensuring percentages sum
+        to the base. If None, determined automatically from the data.
+    interleaf : bool
+        If True, interleave percentage columns with data columns and
+        mark the DataFrame as interleaved.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with percentage panel appended.
+
+    Raises
+    ------
+    ValueError
+        If a panel with the resolved label already exists or if the
+        DataFrame has already been interleaved.
+    """
+    axis_resolved = axes.resolve_axis(axis)
+
+    # resolve panel label
+    config_default = DEFAULTS['transforms']['percentages']['label_pct']
+    if label_pct == config_default:
+        label_pct = resolve_panel_label(label_pct, axis_resolved)
+
+    # check state and resolve data
+    source = state.check_panel_state(data, label_pct)
+
+    # compute percentages
+    pcts = source.pipe(
+        as_percentages,
+        axis=axis,
+        label_totals=label_totals,
+        ignore_keys=ignore_keys,
+        ndigits=ndigits,
+        base=base,
+        apportioned_rounding=apportioned_rounding,
+    )
+
+    # build paneled output
+    panels = chaining.get_nested_key(data.attrs, ['flatbread', 'panels'])
+    if panels is None:
+        result = pd.concat({label_n: data, label_pct: pcts}, axis=1)
+    else:
+        result = pd.concat([data, pd.concat({label_pct: pcts}, axis=1)], axis=1)
+
+    # register panel
+    state.register_panel(result, label_pct, 'percentages', axis_resolved)
+
+    # interleave
+    if interleaf:
+        result = interleave(result)
+        chaining.set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
+
+    return result
+
+
+# region rounding
+def round_apportioned(
+    s: pd.Series,
+    *,
+    ndigits: int = -1
+) -> pd.Series:
+    """
+    Round percentages in a way that they always add up to total.
+    Taken from this SO answer:
+
+    <https://stackoverflow.com/a/13483486/10403856>
+
+    Parameters
+    ----------
+    s (pd.Series):
+        A series of unrounded percentages adding up to total.
+    ndigits (int):
+        Number of digits to round percentages to. Default is -1 (no rounding).
+
+    Returns
+    -------
+    pd.Series:
+        Rounded percentages.
+    """
+    if ndigits < 0:
+        return s
+    cumsum = s.fillna(0).cumsum().round(ndigits)
+    prev_baseline = cumsum.shift(1).fillna(0)
+    rounded = cumsum - prev_baseline
+    keep_na = rounded.mask(s.isna())
+    return keep_na
+
+
+# region interleave
+def interleave(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Interleave percentage panel columns with data columns.
+
+    Moves the panel label from the outermost column level to the
+    innermost, then reorders so each original column is followed
+    by its percentage counterpart.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Paneled DataFrame with percentage columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with interleaved columns.
+    """
+    panels = chaining.get_nested_key(df.attrs, ['flatbread', 'panels']) or {}
+    data_label = next(k for k, v in panels.items() if v['type'] == 'data')
+    reference = df[data_label]
+
+    new_order = list(range(1, df.columns.nlevels)) + [0]
+    return (
+        df
+        .reorder_levels(new_order, axis=1)
+        .pipe(tooling.reindex_by_levels, reference, axis=1)
+    )
