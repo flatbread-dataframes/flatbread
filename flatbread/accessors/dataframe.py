@@ -10,6 +10,7 @@ import flatbread.transforms.panels.differences as diffs
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.output.html import PitaDisplayMixin
+from flatbread.transforms.panels.interleave import interleave
 
 
 @pd.api.extensions.register_dataframe_accessor("pita")
@@ -522,10 +523,6 @@ class PitaFrame(PitaDisplayMixin):
         """
         Interleave panel columns with data columns.
 
-        Reads panel type from attrs and dispatches to the correct
-        interleave implementation. Only works when all panels are
-        of the same type.
-
         Returns
         -------
         pd.DataFrame
@@ -534,39 +531,7 @@ class PitaFrame(PitaDisplayMixin):
         Raises
         ------
         ValueError
-            If no panels exist, panels are mixed type, or DataFrame
-            is already interleaved.
+            If no panels exist, symmetric and asymmetric panels are
+            mixed, or DataFrame is already interleaved.
         """
-        from flatbread.transforms.panels import percentages, differences
-        from flatbread.transforms.chaining import get_nested_key, set_nested_key
-
-        data = self._obj
-
-        if get_nested_key(data.attrs, ['flatbread', 'interleaved']):
-            raise ValueError("DataFrame is already interleaved.")
-
-        panels = get_nested_key(data.attrs, ['flatbread', 'panels'])
-        if panels is None:
-            raise ValueError("No panels to interleave.")
-
-        types = {v['type'] for k, v in panels.items() if k != 'n'}
-        if not types:
-            raise ValueError("No panels to interleave.")
-        if len(types) > 1:
-            raise ValueError(
-                f"Cannot interleave mixed panel types: {', '.join(sorted(types))}."
-            )
-
-        panel_type = types.pop()
-        dispatch = {
-            'percentages': percentages.interleave,
-            'differences': differences.interleave,
-        }
-
-        func = dispatch.get(panel_type)
-        if func is None:
-            raise ValueError(f"No interleave implementation for '{panel_type}'.")
-
-        result = func(data)
-        set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
-        return result
+        return interleave(self._obj)

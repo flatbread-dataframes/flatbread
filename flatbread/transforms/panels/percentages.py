@@ -6,6 +6,7 @@ import pandas as pd
 
 from flatbread import DEFAULTS
 from flatbread.types import Axis, Level
+from flatbread.transforms.panels.interleave import interleave
 import flatbread.transforms.chaining as chaining
 import flatbread.transforms.panels.state as state
 import flatbread.tooling as tooling
@@ -397,6 +398,7 @@ def _(
         If a panel with the resolved label already exists or if the
         DataFrame has already been interleaved.
     """
+    saved_attrs = data.attrs
     axis_resolved = axes.resolve_axis(axis)
 
     # resolve panel label
@@ -426,6 +428,7 @@ def _(
         result = pd.concat([data, pd.concat({label_pct: pcts}, axis=1)], axis=1)
 
     # register panel
+    result.attrs = saved_attrs
     state.register_panel(result, label_pct, 'percentages', axis_resolved)
 
     # interleave
@@ -467,34 +470,3 @@ def round_apportioned(
     rounded = cumsum - prev_baseline
     keep_na = rounded.mask(s.isna())
     return keep_na
-
-
-# region interleave
-def interleave(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Interleave percentage panel columns with data columns.
-
-    Moves the panel label from the outermost column level to the
-    innermost, then reorders so each original column is followed
-    by its percentage counterpart.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Paneled DataFrame with percentage columns.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with interleaved columns.
-    """
-    panels = chaining.get_nested_key(df.attrs, ['flatbread', 'panels']) or {}
-    data_label = next(k for k, v in panels.items() if v['type'] == 'data')
-    reference = df[data_label]
-
-    new_order = list(range(1, df.columns.nlevels)) + [0]
-    return (
-        df
-        .reorder_levels(new_order, axis=1)
-        .pipe(tooling.reindex_by_levels, reference, axis=1)
-    )

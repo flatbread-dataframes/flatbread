@@ -7,6 +7,7 @@ import pandas as pd
 
 from flatbread import DEFAULTS
 from flatbread.types import Axis, Level
+from flatbread.transforms.panels.interleave import interleave
 import flatbread.transforms.chaining as chaining
 import flatbread.transforms.panels.state as state
 import flatbread.tooling as tooling
@@ -225,7 +226,7 @@ def _(
     """
     diffs = as_differences(data, periods=periods, method=method, label_diff=label_diff)
     result = pd.concat([data.pipe(relabel, label_n), diffs], axis=1)
-    state.register_panel(result, label_diff, 'percentages', axis=0)
+    state.register_panel(result, label_diff, 'differences', axis=0)
     return result
 
 
@@ -286,6 +287,7 @@ def _(
         If a panel with the resolved label already exists or if the
         DataFrame has already been interleaved.
     """
+    saved_attrs = data.attrs
     axis_resolved = axes.resolve_axis(axis)
 
     # resolve panel label
@@ -314,13 +316,13 @@ def _(
         result = pd.concat([data, pd.concat({label_diff: diffs}, axis=1)], axis=1)
 
     # register panel
+    result.attrs = saved_attrs
     state.register_panel(result, label_diff, 'differences', axis_resolved)
 
     # interleave
     if interleaf:
         result = interleave(result)
         chaining.set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
-
     return result
 
 
@@ -406,47 +408,3 @@ def _pair(index, periods: int):
 def resolve_panel_label(label: str, axis: Axis) -> str:
     suffix = DEFAULTS['panels']['axis_suffixes'][str(axis)]
     return f"{label}_{suffix}"
-
-
-# region interleave
-def interleave(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Interleave difference panel columns with data columns.
-
-    For axis=0 diffs (symmetric panels), groups each original column
-    with its diff counterpart. For axis=1 diffs (pairwise labels),
-    places each diff between the two columns it compares.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Paneled DataFrame with difference columns.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with interleaved columns.
-    """
-    panels = chaining.get_nested_key(df.attrs, ['flatbread', 'panels']) or {}
-    data_label = next(k for k, v in panels.items() if v['type'] == 'data')
-    diff_meta = next(v for k, v in panels.items() if v['type'] == 'differences')
-    reference = df[data_label]
-
-    if diff_meta['axis'] == 0:
-        new_order = list(range(1, df.columns.nlevels)) + [0]
-        nlevels = None
-    else:
-        new_order = list(range(1, df.columns.nlevels))
-        new_order.insert(-1, 0)
-        nlevels = reference.columns.nlevels - 1
-
-    return (
-        df
-        .reorder_levels(new_order, axis=1)
-        .pipe(
-            tooling.reindex_by_levels,
-            reference,
-            axis=1,
-            nlevels=nlevels,
-        )
-    )
