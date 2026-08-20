@@ -2,7 +2,7 @@ import pandas as pd
 
 from flatbread.transforms import chaining
 from flatbread.transforms.panels import state
-import flatbread.tooling as tooling
+import flatbread.axes as axes
 
 
 def _is_asymmetric(panel_meta: dict) -> bool:
@@ -96,7 +96,7 @@ def interleave(df: pd.DataFrame) -> pd.DataFrame:
     result = (
         df
         .reorder_levels(new_order, axis=1)
-        .pipe(tooling.reindex_by_levels, reference, axis=1, nlevels=nlevels)
+        .pipe(axes.reindex_by_levels, reference, axis=1, nlevels=nlevels)
     )
     chaining.set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
     return result

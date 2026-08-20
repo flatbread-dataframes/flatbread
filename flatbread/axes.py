@@ -206,6 +206,73 @@ def sort_totals(
     )
 
 
+# region sort index
+def _sort_index_from_list(
+    df: pd.DataFrame,
+    order: list|pd.CategoricalDtype,
+    axis: Axis = 0,
+    level: Level|None = None,
+) -> pd.DataFrame:
+    index = df.index if axis in [0, 'index'] else df.columns
+    if isinstance(index, pd.MultiIndex):
+        index = index.levels[level]
+    order = [i for i in order if i in index]
+    return df.reindex(order, axis=axis, level=level)
+
+
+def sort_index_from_list(
+    data: pd.DataFrame|pd.Series,
+    order: list,
+    axis: Axis = 0,
+    level: int|str|None = None,
+) -> pd.DataFrame|pd.Series:
+    sorter = lambda idx: idx.map({n:m for m,n in enumerate(order)})
+    return data.sort_index(axis=axis, level=level, key=sorter)
+
+
+def reindex_by_levels(
+    df_target: pd.DataFrame,
+    df_reference: pd.DataFrame,
+    axis: Axis = 0,
+    nlevels: int | None = None,
+) -> pd.DataFrame:
+    """
+    Reindex df_target along one axis according to the level ordering in df_reference.
+
+    Parameters
+    ----------
+    df_target : pd.DataFrame
+        DataFrame to reindex, with n+k levels on the target axis
+    df_reference : pd.DataFrame
+        Reference DataFrame with n levels on the same axis that define the ordering
+    axis : int, optional
+        Axis to reindex: 0 for index, 1 for columns.
+    nlevels : int or None, optional
+        Number of levels to reindex. If None, reindex all levels in df_reference.
+        If int, reindex only the first `nlevels` levels from df_reference.
+
+    Returns
+    -------
+    pd.DataFrame
+        df_target reindexed with specified levels ordered as in df_reference
+
+    Notes
+    -----
+    Any additional levels in df_target beyond those reindexed are left unchanged.
+    """
+    ref_labels = df_reference.axes[axis]
+    max_levels = ref_labels.nlevels if nlevels is None else nlevels
+
+    result = df_target.copy()
+    for level in range(max_levels):
+        result = result.reindex(
+            ref_labels.get_level_values(level).unique(),
+            axis = axis,
+            level = level,
+        )
+    return result
+
+
 # region add level
 @singledispatch
 def add_level(
