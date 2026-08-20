@@ -205,7 +205,6 @@ def add_differences(
     data,
     *args,
     periods: int = 1,
-    method: DiffMethods = 'diff',
     label_n: str = 'n',
     label_diff: str = 'diff',
     **kwargs,
@@ -222,8 +221,6 @@ def add_differences(
         Input data.
     periods : int
         Number of periods to shift for computing the difference.
-    method : {'diff', 'pct_change'}
-        Differencing method to apply.
     label_n : str
         Label for the original data panel.
     label_diff : str
@@ -250,7 +247,6 @@ def _(
     data: pd.Series,
     *,
     periods: int = 1,
-    method: DiffMethods = 'diff',
     label_n: str = 'n',
     label_diff: str = 'diff',
     **kwargs,
@@ -264,8 +260,6 @@ def _(
         Input series.
     periods : int
         Number of periods to shift.
-    method : {'diff', 'pct_change'}
-        Differencing method to apply.
     label_n : str
         Label for the original data column.
     label_diff : str
@@ -276,7 +270,7 @@ def _(
     pd.DataFrame
         Two-column DataFrame with original values and differences.
     """
-    diffs = as_differences(data, periods=periods, method=method, label_diff=label_diff)
+    diffs = as_differences(data, periods=periods, method='diff', label_diff=label_diff)
     result = pd.concat([data.pipe(relabel, label_n), diffs], axis=1)
     state.register_panel(result, label_diff, 'differences', axis=0)
     return result
@@ -288,7 +282,6 @@ def _(
     *,
     axis: Axis = 0,
     periods: int = 1,
-    method: DiffMethods = 'diff',
     label_n: str = 'n',
     label_diff: str = 'diff',
     ignore_keys: str | list[str] | None = None,
@@ -313,8 +306,6 @@ def _(
         - 1 or ``'columns'``: column-wise differences
     periods : int
         Number of periods to shift for computing the difference.
-    method : {'diff', 'pct_change'}
-        Differencing method to apply.
     label_n : str
         Label for the original data panel.
     label_diff : str
@@ -345,7 +336,7 @@ def _(
         label = label_diff,
         config_default = DEFAULTS['transforms']['differences']['label_diff'],
         panel_type = 'differences',
-        method = method,
+        method = 'diff',
         ignore_keys = ignore_keys,
         periods = periods,
         interleaf = interleaf,

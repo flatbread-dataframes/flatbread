@@ -413,8 +413,6 @@ class PitaFrame(PitaDisplayMixin):
             Axis along which to compute diffs.
         periods : int
             Number of periods to shift.
-        method : {'diff', 'pct_change'}
-            Differencing method to apply.
         label_n : str
             Label for the original data panel.
         label_diff : str
@@ -436,7 +434,6 @@ class PitaFrame(PitaDisplayMixin):
             self._obj,
             axis = axis,
             periods = periods,
-            method = method,
             label_n = label_n,
             label_diff = label_diff,
             ignore_keys = ignore_keys,

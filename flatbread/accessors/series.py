@@ -360,7 +360,6 @@ class PitaSeries(PitaDisplayMixin):
         label_diff: str | None = None,
         ignore_keys: str | list[str] | None = None,
         periods: int = 1,
-        method: diffs.DiffMethods = 'diff',
     ) -> pd.DataFrame:
         """
         Add differences alongside original Series data.
@@ -375,8 +374,6 @@ class PitaSeries(PitaDisplayMixin):
             Keys to exclude from computation.
         periods : int
             Number of periods to shift.
-        method : {'diff', 'pct_change'}
-            Differencing method to apply.
 
         Returns
         -------
@@ -389,7 +386,6 @@ class PitaSeries(PitaDisplayMixin):
             label_diff = label_diff,
             ignore_keys = ignore_keys,
             periods = periods,
-            method = method,
         )
 
     # region pct_change
