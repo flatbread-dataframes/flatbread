@@ -78,7 +78,7 @@ def inject_defaults(defaults: dict) -> Callable:
 
 
 # region offset date
-def offset_date_field(
+def align_dates_by_year(
     df: pd.DataFrame,
     date_field: str,
     year_field: str,
