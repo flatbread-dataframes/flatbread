@@ -146,6 +146,58 @@ def _(
     return results
 
 
+# region panel
+def _build_diff_panel(
+    data: pd.DataFrame,
+    axis: Axis,
+    *,
+    label_n: str,
+    label: str,
+    config_default: str,
+    panel_type: str,
+    method: DiffMethods,
+    ignore_keys: str | list[str] | None,
+    periods: int,
+    interleaf: bool,
+) -> pd.DataFrame:
+    axis_resolved = axes.resolve_axis(axis)
+
+    # resolve panel label
+    if label == config_default:
+        label = resolve_panel_label(label, axis_resolved)
+
+    # check state and resolve data
+    source = state.check_panel_state(data, label)
+
+    # compute differences
+    diffs = as_differences(
+        source,
+        axis = axis,
+        periods = periods,
+        method = method,
+        label_diff = label,
+        ignore_keys = ignore_keys,
+    )
+
+    # build paneled output
+    saved_attrs = data.attrs
+    panels = chaining.get_nested_key(data.attrs, ['flatbread', 'panels'])
+    if panels is None:
+        result = pd.concat({label_n: data, label: diffs}, axis=1)
+    else:
+        result = pd.concat([data, pd.concat({label: diffs}, axis=1)], axis=1)
+    result.attrs = saved_attrs
+
+    # register panel
+    state.register_panel(result, label, panel_type, axis_resolved)
+
+    # interleave
+    if interleaf:
+        result = interleave(result)
+
+    return result
+
+
 # region add diff
 @tooling.inject_defaults(DEFAULTS['transforms']['differences'])
 @singledispatch
@@ -287,43 +339,86 @@ def _(
         If a panel with the resolved label already exists or if the
         DataFrame has already been interleaved.
     """
-    saved_attrs = data.attrs
-    axis_resolved = axes.resolve_axis(axis)
-
-    # resolve panel label
-    config_default = DEFAULTS['transforms']['differences']['label_diff']
-    if label_diff == config_default:
-        label_diff = resolve_panel_label(label_diff, axis_resolved)
-
-    # check state and resolve data
-    source = state.check_panel_state(data, label_diff)
-
-    # compute differences
-    diffs = as_differences(
-        source,
-        axis=axis,
-        periods=periods,
-        method=method,
-        label_diff=label_diff,
-        ignore_keys=ignore_keys,
+    return _build_diff_panel(
+        data, axis,
+        label_n = label_n,
+        label = label_diff,
+        config_default = DEFAULTS['transforms']['differences']['label_diff'],
+        panel_type = 'differences',
+        method = method,
+        ignore_keys = ignore_keys,
+        periods = periods,
+        interleaf = interleaf,
     )
 
-    # build paneled output
-    panels = chaining.get_nested_key(data.attrs, ['flatbread', 'panels'])
-    if panels is None:
-        result = pd.concat({label_n: data, label_diff: diffs}, axis=1)
-    else:
-        result = pd.concat([data, pd.concat({label_diff: diffs}, axis=1)], axis=1)
 
-    # register panel
-    result.attrs = saved_attrs
-    state.register_panel(result, label_diff, 'differences', axis_resolved)
+# region pct_change
+@tooling.inject_defaults(DEFAULTS['transforms']['pct_change'])
+@singledispatch
+def add_pct_change(data, *args, **kwargs) -> Any:
+    raise NotImplementedError('No implementation for this type')
 
-    # interleave
-    if interleaf:
-        result = interleave(result)
-        chaining.set_nested_key(result.attrs, ['flatbread', 'interleaved'], True)
+
+@add_differences.register
+def _(
+    data: pd.Series,
+    *,
+    periods: int = 1,
+    method: DiffMethods = 'pct_change',
+    label_n: str = 'n',
+    label_diff: str = 'pct_change',
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Add percentage change alongside original Series data.
+
+    Parameters
+    ----------
+    data : pd.Series
+        Input series.
+    periods : int
+        Number of periods to shift.
+    method : {'diff', 'pct_change'}
+        Differencing method to apply.
+    label_n : str
+        Label for the original data column.
+    label_diff : str
+        Label for the difference column.
+
+    Returns
+    -------
+    pd.DataFrame
+        Two-column DataFrame with original values and differences.
+    """
+    diffs = as_differences(data, periods=periods, method=method, label_diff=label_diff)
+    result = pd.concat([data.pipe(relabel, label_n), diffs], axis=1)
+    state.register_panel(result, label_diff, 'pct_change', axis=0)
     return result
+
+
+@add_pct_change.register
+def _(
+    data: pd.DataFrame,
+    axis: Axis = 0,
+    *,
+    label_n: str = 'n',
+    label_pct_change: str = 'pct_change',
+    ignore_keys: str | list[str] | None = None,
+    periods: int = 1,
+    interleaf: bool = False,
+    **kwargs,
+) -> pd.DataFrame:
+    return _build_diff_panel(
+        data, axis,
+        label_n = label_n,
+        label = label_pct_change,
+        config_default = DEFAULTS['transforms']['pct_change']['label_pct_change'],
+        panel_type = 'pct_change',
+        method = 'pct_change',
+        ignore_keys = ignore_keys,
+        periods = periods,
+        interleaf = interleaf,
+    )
 
 
 # region labels

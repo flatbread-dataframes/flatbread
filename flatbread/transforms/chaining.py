@@ -105,6 +105,39 @@ def get_data_mask(index: pd.Index, ignore_keys: list[str] | None):
     return result
 
 
+# region margins
+def resolve_margin_labels(attrs: dict | None = None) -> set[str]:
+    """
+    Collect all margin labels from config defaults and tracked attrs.
+
+    Parameters
+    ----------
+    attrs : dict or None
+        The DataFrame's ``.attrs`` dict containing potential flatbread
+        labels. If None, only default labels are returned.
+
+    Returns
+    -------
+    set[str]
+        All margin labels (default and custom).
+    """
+    margin_labels = set()
+    transforms = DEFAULTS.get('transforms', {})
+    attr_labels = (attrs or {}).get('flatbread', {}).get('labels', {})
+
+    for transform_name, transform_config in transforms.items():
+        for margin_label in transform_config.get('margin_labels', []):
+            if margin_label in transform_config:
+                label_value = transform_config[margin_label]
+                if label_value is not None:
+                    margin_labels.add(label_value)
+
+        tracked = attr_labels.get(transform_name, set())
+        margin_labels.update(tracked)
+
+    return margin_labels
+
+
 # region ignore
 def resolve_ignored_keys(data, transform_name, ignore_keys=None):
     """

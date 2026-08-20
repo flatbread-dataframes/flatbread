@@ -446,6 +446,50 @@ class PitaFrame(PitaDisplayMixin):
     def add_diffs(self, *args, **kwargs):
         return self.add_differences(*args, **kwargs)
 
+    # region pct_change
+    def add_pct_change(
+        self,
+        axis: Axis = 0,
+        *,
+        label_n: str | None = None,
+        label_pct_change: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        periods: int = 1,
+        interleaf: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Add percentage change panel alongside original data.
+
+        Parameters
+        ----------
+        axis : Axis
+            Axis along which to compute pct_change. Default 0.
+        label_n : str or None
+            Label for the original data panel.
+        label_pct_change : str or None
+            Label for the pct_change panel.
+        ignore_keys : str or list[str] or None
+            Keys to exclude from computation.
+        periods : int
+            Number of periods to shift.
+        interleaf : bool
+            If True, interleave pct_change columns with data columns.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with pct_change panel appended.
+        """
+        return diffs.add_pct_change(
+            self._obj,
+            axis = axis,
+            label_n = label_n,
+            label_pct_change = label_pct_change,
+            ignore_keys = ignore_keys,
+            periods = periods,
+            interleaf = interleaf,
+        )
+
     # region io
     def export_excel(
         self,

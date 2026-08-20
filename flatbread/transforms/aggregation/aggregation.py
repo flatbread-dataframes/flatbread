@@ -122,8 +122,9 @@ def add_agg(
         original_index = data.index,
         _fill = _fill,
     )
-    return pd.concat([data, new_row], names=data.index.names)
-
+    result = pd.concat([data, new_row], names=data.index.names)
+    result.attrs = df.attrs
+    return result
 
 # region subagg
 @tooling.handle_series_as_dataframe
@@ -140,7 +141,7 @@ def add_subagg(
     _fill = '',
     **kwargs,
 ):
-    return _subagg_implementation(
+    return _build_subagg(
         df.copy(),
         aggfunc,
         *args,
@@ -154,7 +155,7 @@ def add_subagg(
     )
 
 
-def _subagg_implementation(
+def _build_subagg(
     data: pd.DataFrame,
     aggfunc: str|Callable,
     *args,
@@ -166,6 +167,7 @@ def _subagg_implementation(
     _fill = '',
     **kwargs,
 ):
+    saved_attrs = data.attrs
     names = data.index.names
     label = get_label(label, aggfunc)
     levels = get_levels(level, names)
@@ -202,8 +204,9 @@ def _subagg_implementation(
             processed.append(group)
         return pd.concat(processed)
 
-    output = data
+    result = data
     for level in sorted(levels, reverse=True):
         grouper = 0 if level == 0 else list(range(level + 1))
-        output = output.groupby(level=grouper, sort=False).pipe(process_groups)
-    return output
+        result = result.groupby(level=grouper, sort=False).pipe(process_groups)
+    result.attrs = saved_attrs
+    return result

@@ -4,6 +4,7 @@ from typing import Any
 
 import pandas as pd
 
+import flatbread.transforms.chaining as chaining
 from flatbread import DEFAULTS
 from flatbread.output.formats import FormatResolver
 
@@ -32,37 +33,14 @@ def _get_auto_number_formats(df: pd.DataFrame) -> dict[str, str]:
 def _get_auto_border_specs(df: pd.DataFrame) -> dict[str, list[str]]:
     """Extract border specifications from flatbread margin labels."""
     border_specs = {'rows': [], 'columns': []}
+    margin_labels = chaining.resolve_margin_labels(df.attrs)
 
-    # Get margin labels from attrs or defaults
-    margin_labels = set()
-
-    # Check DataFrame attrs for stored margin labels
-    if hasattr(df, 'attrs') and df.attrs.get('flatbread'):
-        fb_attrs = df.attrs['flatbread']
-        if 'totals' in fb_attrs and 'ignore_keys' in fb_attrs['totals']:
-            margin_labels.update(fb_attrs['totals']['ignore_keys'])
-        if 'percentages' in fb_attrs and 'ignore_keys' in fb_attrs['percentages']:
-            margin_labels.update(fb_attrs['percentages']['ignore_keys'])
-
-    # Add default margin labels
-    margin_labels.update([
-        DEFAULTS['transforms']['totals']['label'],
-        DEFAULTS['transforms']['subtotals']['label'],
-        DEFAULTS['transforms']['percentages']['label_pct'],
-    ])
-
-    # Remove duplicates
-    margin_labels = list(set(margin_labels))
-
-    # Find matching rows and columns
     for label in margin_labels:
-        # Check index for row borders
         for idx in df.index:
             if _matches_label(idx, label):
                 border_specs['rows'].append(label)
                 break
 
-        # Check columns for column borders
         for col in df.columns:
             if _matches_label(col, label):
                 border_specs['columns'].append(label)

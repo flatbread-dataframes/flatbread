@@ -4,6 +4,7 @@ from typing import Any
 
 from jinja2 import Environment, PackageLoader
 
+import flatbread.transforms.chaining as chaining
 from flatbread import DEFAULTS
 from flatbread.output.html.constants import FLATBREAD_TABLE_URL
 from flatbread.output.html.tablespec import FormatSpec, TableSpecBuilder
@@ -64,25 +65,7 @@ class DisplayConfig:
     def _extract_margin_labels(
         cls, defaults: dict[str, Any], data_attrs: dict | None
     ) -> set[str]:
-        """Extract margin labels from defaults and data_attrs"""
-        margin_labels = set()
-        transforms = defaults.get("transforms", {})
-        data_attrs = {} if data_attrs is None else data_attrs
-        attr_labels = data_attrs.get("flatbread", {}).get("labels")
-
-        for transform_config in transforms.values():
-            config_labels = transform_config.get("margin_labels", [])
-            for margin_label in config_labels:
-                if margin_label in transform_config:
-                    label_value = transform_config[margin_label]
-                    if label_value is not None:
-                        margin_labels.add(label_value)
-                if attr_labels and margin_label in attr_labels:
-                    attr_label = attr_labels[margin_label]
-                    if attr_label is not None:
-                        margin_labels.add(attr_label)
-
-        return margin_labels
+        return chaining.resolve_margin_labels(data_attrs)
 
     def update(self, **kwargs) -> None:
         for key, value in kwargs.items():

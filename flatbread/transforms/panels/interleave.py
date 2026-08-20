@@ -6,8 +6,8 @@ import flatbread.tooling as tooling
 
 
 def _is_asymmetric(panel_meta: dict) -> bool:
-    """Check if a panel has asymmetric column structure (diff axis=1)."""
-    return panel_meta['type'] == 'differences' and panel_meta['axis'] == 1
+    asymmetric = ('differences', 'pct_change')
+    return panel_meta['type'] in asymmetric and panel_meta['axis'] == 1
 
 
 def validate(data: pd.DataFrame) -> str:

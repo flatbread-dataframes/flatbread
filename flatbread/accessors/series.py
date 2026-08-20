@@ -6,6 +6,7 @@ import pandas as pd
 import flatbread.transforms.panels.percentages as pct
 import flatbread.transforms.aggregation.aggregation as agg
 import flatbread.transforms.aggregation.totals as totals
+import flatbread.transforms.panels.differences as diffs
 import flatbread.axes as axes
 from flatbread.types import Axis, Level
 from flatbread.output.html import PitaDisplayMixin
@@ -103,6 +104,120 @@ class PitaSeries(PitaDisplayMixin):
             ignore_keys = ignore_keys,
             skip_single_rows = skip_single_rows,
             _fill = _fill,
+        )
+
+    #region totals
+    def add_totals(
+        self,
+        label: str|None = None,
+        ignore_keys: str|list[str]|None = None,
+        _fill: str = '',
+    ) -> pd.Series:
+        """
+        Add totals to a Series.
+
+        Parameters
+        ----------
+        label (str|None):
+            Label for the totals row. Default 'Totals'.
+        ignore_keys (str|list[str]|None):
+            Keys of rows to ignore when aggregating. Default 'Subtotals'
+
+        Returns
+        -------
+        pd.Series:
+            Series with totals row added.
+        """
+        return totals.add_totals( # type: ignore
+            self._obj,
+            label = label,
+            ignore_keys = ignore_keys,
+            _fill = _fill,
+        )
+
+    def add_subtotals(
+        self,
+        level: Level|list[Level] = 0,
+        label: str|None = None,
+        include_level_name: bool = False,
+        ignore_keys: str|list[str]|None = None,
+        skip_single_rows: bool = True,
+        _fill: str = '',
+    ) -> pd.Series:
+        """
+        Add subtotals to a Series.
+
+        Parameters
+        ----------
+        level (int|str|list[int|str]):
+            Level(s) to add subtotals to. Default 0.
+        label (str|None):
+            Label for the subtotals rows. Default 'Subtotals'.
+        include_level_name (bool):
+            Whether to add level name to subtotal label.
+        ignore_keys (str|list[str]|None):
+            Keys of rows to ignore when aggregating. Default 'Totals'
+        skip_single_rows (bool):
+            Whether to skip single rows when aggregating. Default True.
+
+        Returns
+        -------
+        pd.Series:
+            Series with subtotal rows added.
+        """
+        return totals.add_subtotals( # type: ignore
+            self._obj,
+            level = level,
+            label = label,
+            include_level_name = include_level_name,
+            ignore_keys = ignore_keys,
+            skip_single_rows = skip_single_rows,
+            _fill = _fill,
+        )
+
+    def sort_totals(
+        self,
+        axis: Axis = 0,
+        level: Level|list[Level]|None = None,
+        labels: list[str]|None = None,
+        totals_last: bool = True,
+        sort_remaining: bool = True,
+    ) -> pd.Series:
+        """
+        Sort index/columns to position totals and subtotals at start or end within groups.
+
+        Convenience function that sorts common aggregate labels (totals, subtotals) to
+        their appropriate positions, while leaving other items in their existing order.
+        Uses default labels from flatbread configuration unless custom labels are provided.
+
+        Parameters
+        ----------
+        axis : Axis, default 0
+            Axis to sort along:
+            - 0 or 'index': sort the index (rows)
+            - 1 or 'columns': sort the columns
+        level : Level | list[Level] | None, default None
+            Index level(s) to sort. Can be level number(s), level name(s), or None for all levels.
+        labels : list[str] | None, default None
+            Custom labels to treat as totals/subtotals. If None, uses default labels from
+            flatbread configuration ('Totals', 'Subtotals').
+        totals_last : bool, default True
+            Whether to place totals/subtotals at the end (True) or beginning (False) of each group.
+        sort_remaining : bool, default True
+            Whether to sort non-target levels alphabetically.
+
+        Returns
+        -------
+        pd.Series
+            Series with totals/subtotals repositioned according to the specified parameters.
+        """
+        return axes.sort_totals( # type: ignore
+            self._obj,
+            axis = axis,
+            level = level,
+            labels = labels,
+            totals_last = totals_last,
+            sort_remaining = sort_remaining,
         )
 
     #region value counts
@@ -237,118 +352,80 @@ class PitaSeries(PitaDisplayMixin):
     def add_pct(self, *args, **kwargs):
         return self.add_percentages(*args, **kwargs)
 
-    #region totals
-    def add_totals(
+    # region diffs
+    def add_diffs(
         self,
-        label: str|None = None,
-        ignore_keys: str|list[str]|None = None,
-        _fill: str = '',
-    ) -> pd.Series:
+        *,
+        label_n: str | None = None,
+        label_diff: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        periods: int = 1,
+        method: diffs.DiffMethods = 'diff',
+    ) -> pd.DataFrame:
         """
-        Add totals to a Series.
+        Add differences alongside original Series data.
 
         Parameters
         ----------
-        label (str|None):
-            Label for the totals row. Default 'Totals'.
-        ignore_keys (str|list[str]|None):
-            Keys of rows to ignore when aggregating. Default 'Subtotals'
+        label_n : str or None
+            Label for the original data column.
+        label_diff : str or None
+            Label for the difference column.
+        ignore_keys : str or list[str] or None
+            Keys to exclude from computation.
+        periods : int
+            Number of periods to shift.
+        method : {'diff', 'pct_change'}
+            Differencing method to apply.
 
         Returns
         -------
-        pd.Series:
-            Series with totals row added.
+        pd.DataFrame
+            Two-column DataFrame with original values and differences.
         """
-        return totals.add_totals( # type: ignore
+        return diffs.add_differences(
             self._obj,
-            label = label,
+            label_n = label_n,
+            label_diff = label_diff,
             ignore_keys = ignore_keys,
-            _fill = _fill,
+            periods = periods,
+            method = method,
         )
 
-    def add_subtotals(
+    # region pct_change
+    def add_pct_change(
         self,
-        level: Level|list[Level] = 0,
-        label: str|None = None,
-        include_level_name: bool = False,
-        ignore_keys: str|list[str]|None = None,
-        skip_single_rows: bool = True,
-        _fill: str = '',
-    ) -> pd.Series:
+        *,
+        label_n: str | None = None,
+        label_pct_change: str | None = None,
+        ignore_keys: str | list[str] | None = None,
+        periods: int = 1,
+    ) -> pd.DataFrame:
         """
-        Add subtotals to a Series.
+        Add percentage change alongside original Series data.
 
         Parameters
         ----------
-        level (int|str|list[int|str]):
-            Level(s) to add subtotals to. Default 0.
-        label (str|None):
-            Label for the subtotals rows. Default 'Subtotals'.
-        include_level_name (bool):
-            Whether to add level name to subtotal label.
-        ignore_keys (str|list[str]|None):
-            Keys of rows to ignore when aggregating. Default 'Totals'
-        skip_single_rows (bool):
-            Whether to skip single rows when aggregating. Default True.
+        label_n : str or None
+            Label for the original data column.
+        label_pct_change : str or None
+            Label for the pct_change column.
+        ignore_keys : str or list[str] or None
+            Keys to exclude from computation.
+        periods : int
+            Number of periods to shift.
 
         Returns
         -------
-        pd.Series:
-            Series with subtotal rows added.
+        pd.DataFrame
+            Two-column DataFrame with original values and pct_change.
         """
-        return totals.add_subtotals( # type: ignore
+        return diffs.add_pct_change(
             self._obj,
-            level = level,
-            label = label,
-            include_level_name = include_level_name,
+            label_n = label_n,
+            label_pct_change = label_pct_change,
             ignore_keys = ignore_keys,
-            skip_single_rows = skip_single_rows,
-            _fill = _fill,
-        )
-
-    def sort_totals(
-        self,
-        axis: Axis = 0,
-        level: Level|list[Level]|None = None,
-        labels: list[str]|None = None,
-        totals_last: bool = True,
-        sort_remaining: bool = True,
-    ) -> pd.Series:
-        """
-        Sort index/columns to position totals and subtotals at start or end within groups.
-
-        Convenience function that sorts common aggregate labels (totals, subtotals) to
-        their appropriate positions, while leaving other items in their existing order.
-        Uses default labels from flatbread configuration unless custom labels are provided.
-
-        Parameters
-        ----------
-        axis : Axis, default 0
-            Axis to sort along:
-            - 0 or 'index': sort the index (rows)
-            - 1 or 'columns': sort the columns
-        level : Level | list[Level] | None, default None
-            Index level(s) to sort. Can be level number(s), level name(s), or None for all levels.
-        labels : list[str] | None, default None
-            Custom labels to treat as totals/subtotals. If None, uses default labels from
-            flatbread configuration ('Totals', 'Subtotals').
-        totals_last : bool, default True
-            Whether to place totals/subtotals at the end (True) or beginning (False) of each group.
-        sort_remaining : bool, default True
-            Whether to sort non-target levels alphabetically.
-
-        Returns
-        -------
-        pd.Series
-            Series with totals/subtotals repositioned according to the specified parameters.
-        """
-        return axes.sort_totals( # type: ignore
-            self._obj,
-            axis = axis,
-            level = level,
-            labels = labels,
-            totals_last = totals_last,
-            sort_remaining = sort_remaining,
+            periods = periods,
         )
 
     # region io

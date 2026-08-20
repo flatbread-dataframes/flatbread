@@ -4,6 +4,12 @@ import pandas as pd
 from flatbread import DEFAULTS
 
 
+PANEL_FORMAT_MAP = {
+    'percentages':  'percentage',
+    'differences':  'signed_integer',
+    'pct_change':   'signed_percentage',
+}
+
 class FormatResolver:
     """Central format resolution for all output types"""
 
@@ -57,9 +63,7 @@ class FormatResolver:
         return None
 
     def _resolve_format_type(self, column) -> str | None:
-        """Determine the format type for a column"""
-
-        # 1. Check explicit format metadata (highest priority)
+        # 1. Explicit format metadata (highest priority)
         explicit_format = (
             self.data.attrs
             .get('flatbread', {})
@@ -69,7 +73,12 @@ class FormatResolver:
         if explicit_format:
             return explicit_format
 
-        # 2. Check smart format detection (fallback)
+        # 2. Panel metadata
+        panel_format = self._detect_panel_format(column)
+        if panel_format:
+            return panel_format
+
+        # 3. Smart format detection (fallback)
         return self._detect_smart_format_type(column)
 
     def _detect_smart_format_type(self, column) -> str | None:
@@ -84,6 +93,17 @@ class FormatResolver:
                     best_match = format_type
                     best_length = len(label)
         return best_match
+
+    def _detect_panel_format(self, column) -> str | None:
+        """Detect format type from panel metadata."""
+        panels = self.data.attrs.get('flatbread', {}).get('panels', {})
+        if not panels:
+            return None
+        column_parts = set(column) if isinstance(column, tuple) else {column}
+        for label, meta in panels.items():
+            if label in column_parts:
+                return PANEL_FORMAT_MAP.get(meta['type'])
+        return None
 
     def _get_column_text(self, column) -> str:
         """Extract searchable text from column (handle tuples)"""

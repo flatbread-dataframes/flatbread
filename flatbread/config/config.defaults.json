@@ -23,7 +23,12 @@
         "differences": {
             "label_n": "n",
             "label_diff": "diff",
-            "ignore_transforms": ["totals", "percentages", "differences"]
+            "ignore_transforms": ["totals", "percentages", "differences", "pct_change"]
+        },
+        "pct_change": {
+            "label_n": "n",
+            "label_pct_change": "pct_change",
+            "ignore_transforms": ["totals", "percentages", "differences", "pct_change"]
         }
     },
     "panels": {
@@ -36,7 +41,7 @@
     "locale": null,
     "output_formats": {
         "percentage": {
-            "smart_labels": ["pct"],
+            "smart_labels": ["pct", "%"],
             "html_options": {
                 "style": "percent",
                 "minimumFractionDigits": 0,
@@ -45,14 +50,14 @@
             "excel_format": "0.0%"
         },
         "signed_integer": {
-            "smart_labels": ["diff"],
+            "smart_labels": ["diff", "Δ"],
             "html_options": {
                 "signDisplay": "always"
             },
             "excel_format": "+#,##0;-#,##0"
         },
         "signed_percentage": {
-            "smart_labels": ["pct_change"],
+            "smart_labels": ["pct_change", "Δ%"],
             "html_options": {
                 "style": "percent",
                 "signDisplay": "always"
