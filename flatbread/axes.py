@@ -108,6 +108,9 @@ def sort_aggregates(
     >>> # MultiIndex example - sort level 1 within each level 0 group
     >>> sort_aggregates(df, level=1, labels=['Subtotals'], aggregates_last=False)
     """
+    if labels is None:
+        return data
+
     if level is None:
         resolved_level = None
     elif isinstance(level, list):
