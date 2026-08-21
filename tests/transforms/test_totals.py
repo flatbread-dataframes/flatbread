@@ -11,7 +11,7 @@ from flatbread.testing.dataframe import make_test_df
 # region simple
 class TestTotalsAdd_DataFrameSimple(unittest.TestCase):
     def setUp(self):
-        self.totals_label = DEFAULTS['totals']['label']
+        self.totals_label = DEFAULTS['transforms']['totals']['label']
         self.df = make_test_df(
             nrows=5,
             ncols=4,
@@ -64,7 +64,7 @@ class TestTotalsAdd_DataFrameSimple(unittest.TestCase):
 # region categorical
 class TestTotalsAdd_DataFrameCategorical(unittest.TestCase):
     def setUp(self):
-        self.totals_label = DEFAULTS['totals']['label']
+        self.totals_label = DEFAULTS['transforms']['totals']['label']
         df = make_test_df(nrows=5, ncols=4)
         df.columns = pd.Categorical(df.columns)
         df.index = pd.Categorical(df.index)
@@ -88,7 +88,7 @@ class TestTotalsAdd_DataFrameCategorical(unittest.TestCase):
 # region multiindex
 class TestTotalsAdd_DataFrameMultiIndex(unittest.TestCase):
     def setUp(self):
-        self.subtotals_label = DEFAULTS['subtotals']['label']
+        self.subtotals_label = DEFAULTS['transforms']['subtotals']['label']
         self.fill = ''
         self.df = make_test_df(
             nrows=7,
