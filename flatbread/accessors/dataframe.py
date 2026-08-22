@@ -22,12 +22,10 @@ class PitaFrame(PitaDisplayMixin):
     def add_agg(
         self,
         aggfunc: str|Callable,
-        *args,
         axis: Axis = 0,
         label: str|None = None,
         ignore_keys: str|list[str]|None = None,
         _fill: str = '',
-        **kwargs,
     ) -> pd.DataFrame:
         """
         Add aggregation to df.
@@ -42,10 +40,6 @@ class PitaFrame(PitaDisplayMixin):
             Label for the aggregation row/column. Default None.
         ignore_keys (str|list[str]|None):
             Keys of rows to ignore when aggregating.
-        *args:
-            Positional arguments to pass to func.
-        **kwargs:
-            Keyword arguments to pass to func.
 
         Returns
         -------
@@ -55,12 +49,10 @@ class PitaFrame(PitaDisplayMixin):
         return agg.add_agg(
             self._obj,
             aggfunc,
-            *args,
             axis = axis,
             label = label,
             ignore_keys = ignore_keys,
             _fill = _fill,
-            **kwargs,
         )
 
     def add_subagg(
@@ -83,7 +75,7 @@ class PitaFrame(PitaDisplayMixin):
             Function to use for aggregating the data.
         axis (int | Literal["index", "columns", "both"]):
             Axis to aggregate. Default 0.
-        levels (int|str|list[int|str]):
+        level (int|str|list[int|str]):
             Levels to aggregate. Default 0.
         label (str|None):
             Label for the aggregation row/column. Default None.
@@ -93,10 +85,6 @@ class PitaFrame(PitaDisplayMixin):
             Keys of rows to ignore when aggregating. Default 'Totals'
         skip_single_rows (bool):
             Whether to skip single rows when aggregating. Default True.
-        *args:
-            Positional arguments to pass to func.
-        **kwargs:
-            Keyword arguments to pass to func.
 
         Returns
         -------
@@ -257,8 +245,6 @@ class PitaFrame(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.DataFrame):
-            The input DataFrame.
         axis (int | Literal["index", "columns", "both"]):
             The axis along which percentages are calculated. Percentages are based on:
             - when axis is 2 then grand total
@@ -309,8 +295,6 @@ class PitaFrame(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.DataFrame):
-            The input DataFrame.
         axis (int | Literal["index", "columns", "both"]):
             The axis along which percentages are calculated. Percentages are based on:
             - when axis is 2 then grand total
@@ -365,8 +349,6 @@ class PitaFrame(PitaDisplayMixin):
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Input data.
         periods : int
             Number of periods to shift.
         method : {'diff', 'pct_change'}
@@ -407,8 +389,6 @@ class PitaFrame(PitaDisplayMixin):
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Input data.
         axis : {0, 1, 'index', 'columns'}
             Axis along which to compute diffs.
         periods : int
@@ -535,8 +515,6 @@ class PitaFrame(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.DataFrame):
-            Input DataFrame.
         value (Any):
             Value to fill the new level with.
         level (int, optional):

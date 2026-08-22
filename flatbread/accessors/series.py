@@ -21,11 +21,9 @@ class PitaSeries(PitaDisplayMixin):
     def add_agg(
         self,
         aggfunc: str|Callable,
-        *args,
         label: str|None = None,
         ignore_keys: str|list[str]|None = None,
         _fill: str = '',
-        **kwargs,
     ) -> pd.Series:
         """
         Add aggregate to a Series.
@@ -38,10 +36,6 @@ class PitaSeries(PitaDisplayMixin):
             Label for the aggregated row. Default None.
         ignore_keys (str|list[str]|None):
             Keys of rows to ignore when aggregating.
-        *args:
-            Positional arguments to pass to func.
-        **kwargs:
-            Keyword arguments to pass to func.
 
         Returns
         -------
@@ -51,11 +45,9 @@ class PitaSeries(PitaDisplayMixin):
         return agg.add_agg(
             self._obj,
             aggfunc,
-            *args,
             label = label,
             ignore_keys = ignore_keys,
             _fill = _fill,
-            **kwargs,
         )
 
     def add_subagg(
@@ -85,10 +77,6 @@ class PitaSeries(PitaDisplayMixin):
             Keys of rows to ignore when aggregating. Default 'Totals'
         skip_single_rows (bool):
             Whether to skip single rows when aggregating. Default True.
-        *args:
-            Positional arguments to pass to func.
-        **kwargs:
-            Keyword arguments to pass to func.
 
         Returns
         -------
@@ -279,8 +267,6 @@ class PitaSeries(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.Series):
-            The input Series.
         label_pct (str):
             Label for the percentage column. Default is 'pct'.
         label_totals (str|None):
@@ -321,8 +307,6 @@ class PitaSeries(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.Series):
-            The input Series.
         label_n (str):
             Label for the original count column. Default is 'n'.
         label_pct (str):
@@ -472,8 +456,6 @@ class PitaSeries(PitaDisplayMixin):
 
         Parameters
         ----------
-        data (pd.Series):
-            Input Series.
         value (Any):
             Value to fill the new level with.
         level (int, optional):

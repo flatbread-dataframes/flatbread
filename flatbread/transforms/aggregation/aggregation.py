@@ -105,11 +105,9 @@ def create_single_index_row(
 def add_agg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
-    *args,
     label: str|None = None,
     ignore_keys: str|list[str]|None = None,
     _fill: str|None = '',
-    **kwargs,
 ) -> pd.DataFrame:
     data = df.copy()
     label = get_label(label, aggfunc)
@@ -132,40 +130,34 @@ def add_agg(
 def add_subagg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
-    *args,
     level: Level = 0,
     label: str|None = None,
     include_level_name: bool = False,
     ignore_keys: str|list[str]|None = None,
     skip_single_rows: bool = True,
     _fill = '',
-    **kwargs,
 ):
     return _build_subagg(
         df.copy(),
         aggfunc,
-        *args,
         level=level,
         label=label,
         include_level_name=include_level_name,
         ignore_keys=ignore_keys,
         skip_single_rows=skip_single_rows,
         _fill=_fill,
-        **kwargs,
     )
 
 
 def _build_subagg(
     data: pd.DataFrame,
     aggfunc: str|Callable,
-    *args,
     level: Level = 0,
     label: str|None = None,
     include_level_name: bool = False,
     ignore_keys: str|list[str]|None = None,
     skip_single_rows: bool = True,
     _fill = '',
-    **kwargs,
 ):
     saved_attrs = data.attrs
     names = data.index.names
