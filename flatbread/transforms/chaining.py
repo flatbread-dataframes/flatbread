@@ -98,10 +98,6 @@ def get_data_mask(index: pd.Index, ignore_keys: list[str] | None):
         result = [should_keep(idx) for idx in index]
 
     result = pd.Series(result, index=index)
-    if not result.any():
-        raise ValueError(
-            "All data has been masked. Check ignore_keys or prior transforms."
-        )
     return result
 
 

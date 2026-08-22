@@ -30,13 +30,6 @@ class TestGetDataMask_SimpleIndex(unittest.TestCase):
         mask = chaining.get_data_mask(index, ['Subtotals'])
         self.assertEqual(list(mask), [True, False, True])
 
-    def test_all_masked_raises(self):
-        index = pd.Index(['Totals', 'Subtotals'])
-        self.assertRaises(
-            ValueError,
-            chaining.get_data_mask, index, ['Totals', 'Subtotals'],
-        )
-
 
 class TestGetDataMask_MultiIndex(unittest.TestCase):
     def setUp(self):
