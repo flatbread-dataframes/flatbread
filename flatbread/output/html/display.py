@@ -1,3 +1,5 @@
+"""Display mixin and configuration for rendering pandas objects via the flatbread-table web component."""
+
 import uuid
 from dataclasses import MISSING, dataclass, field, fields
 from typing import Any

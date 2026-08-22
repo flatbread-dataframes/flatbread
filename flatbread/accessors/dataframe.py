@@ -1,3 +1,5 @@
+"""DataFrame accessor providing flatbread tabulation methods via ``df.pita``."""
+
 from typing import Any, Callable
 from pathlib import Path
 
@@ -15,6 +17,12 @@ from flatbread.transforms.panels.interleave import interleave
 
 @pd.api.extensions.register_dataframe_accessor("pita")
 class PitaFrame(PitaDisplayMixin):
+    """Tabulation methods for DataFrames, registered as ``df.pita``.
+
+    All methods return a new DataFrame, leaving the original
+    unmodified. Methods can be chained.
+    """
+
     def __init__(self, pandas_obj):
         self._obj = pandas_obj
 

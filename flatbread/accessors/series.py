@@ -1,3 +1,5 @@
+"""Series accessor providing flatbread tabulation methods via ``s.pita``."""
+
 from typing import Any, Callable, Hashable, Literal, TypeAlias
 from pathlib import Path
 
@@ -14,6 +16,12 @@ from flatbread.output.html import PitaDisplayMixin
 
 @pd.api.extensions.register_series_accessor("pita")
 class PitaSeries(PitaDisplayMixin):
+    """Tabulation methods for Series, registered as ``s.pita``.
+
+    All methods return a new Series or DataFrame,
+    leaving the original unmodified. Methods can be chained.
+    """
+
     def __init__(self, pandas_obj):
         self._obj = pandas_obj
 

@@ -1,3 +1,5 @@
+"""Compute and add percentage columns alongside original data."""
+
 from dataclasses import dataclass
 from functools import singledispatch
 from typing import Any

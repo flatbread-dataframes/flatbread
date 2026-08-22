@@ -1,3 +1,5 @@
+"""Layered configuration loader with defaults, user, and project-level overrides."""
+
 from typing import Any
 from pathlib import Path
 import json

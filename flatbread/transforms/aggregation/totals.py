@@ -1,3 +1,5 @@
+"""Add totals and subtotals using sum aggregation."""
+
 from typing import Literal
 
 import pandas as pd

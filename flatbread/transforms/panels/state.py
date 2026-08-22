@@ -1,3 +1,5 @@
+"""Track and validate panel metadata stored in DataFrame attrs."""
+
 import pandas as pd
 
 from flatbread.types import Axis

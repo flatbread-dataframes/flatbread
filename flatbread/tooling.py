@@ -1,3 +1,5 @@
+"""Decorators for axis handling, series-to-dataframe conversion, and default injection."""
+
 from functools import wraps
 from typing import Any, Callable, TypeVar
 
@@ -77,7 +79,7 @@ def inject_defaults(defaults: dict) -> Callable:
     return decorator
 
 
-# region offset date
+# region offset dates
 def align_dates_by_year(
     df: pd.DataFrame,
     date_field: str,

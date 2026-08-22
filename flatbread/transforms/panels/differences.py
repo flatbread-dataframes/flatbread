@@ -1,3 +1,5 @@
+"""Compute and add differences and percentage change alongside original data."""
+
 from collections import defaultdict
 from functools import singledispatch
 from itertools import pairwise

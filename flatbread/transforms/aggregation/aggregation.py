@@ -1,3 +1,5 @@
+"""Core aggregation logic for appending aggregated rows or columns to a DataFrame."""
+
 from functools import singledispatch
 from typing import Any, Callable
 import warnings

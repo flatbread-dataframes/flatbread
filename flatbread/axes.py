@@ -1,3 +1,5 @@
+"""Index and column manipulation utilities: level insertion, reindexing, axis resolution."""
+
 from functools import singledispatch
 from typing import Any
 

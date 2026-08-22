@@ -1,3 +1,5 @@
+"""Utilities for tracking flatbread labels across chained operations."""
+
 import functools
 from typing import Any, Callable
 

@@ -1,3 +1,5 @@
+"""Reorder paneled DataFrames so each data column is grouped with its panel counterparts."""
+
 import pandas as pd
 
 from flatbread.transforms import chaining
