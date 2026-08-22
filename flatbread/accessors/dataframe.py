@@ -53,6 +53,12 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame:
             Table with aggregated rows/columns added.
+
+        Examples
+        --------
+        >>> df.pita.add_agg('mean')
+        >>> df.pita.add_agg('median', axis=1, label='Median')
+        >>> df.pita.add_agg(lambda x: x.max() - x.min(), label='range')
         """
         return agg.add_agg(
             self._obj,
@@ -98,6 +104,11 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame:
             Table with aggregated rows/columns added.
+
+        Examples
+        --------
+        >>> df.pita.add_subagg('mean', level=0)
+        >>> df.pita.add_subagg('mean', level=0, include_level_name=True)
         """
         return agg.add_agg(
             self._obj,
@@ -135,6 +146,12 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame:
             Table with total rows/columns added.
+
+        Examples
+        --------
+        >>> df.pita.add_totals()  # adds to both rows and columns
+        >>> df.pita.add_totals(axis=0)  # row totals only
+        >>> df.pita.add_totals(axis=1, label='Sum')  # column totals with custom label
         """
         return totals.add_totals( # type: ignore
             self._obj,
@@ -176,6 +193,12 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame:
             Table with total rows/columns added.
+
+        Examples
+        --------
+        >>> df.pita.add_subtotals(level=0)  # subtotals by outermost index level
+        >>> df.pita.add_subtotals(level=[0, 1])  # subtotals at multiple levels
+        >>> df.pita.add_subtotals(level=0, include_level_name=True)
         """
         return totals.add_subtotals( # type: ignore
             self._obj,
@@ -329,6 +352,13 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame:
             DataFrame with additional columns for percentages.
+
+        Examples
+        --------
+        >>> df.pita.add_totals().pita.add_percentages()  # percentages of grand total
+        >>> df.pita.add_totals().pita.add_percentages(axis=0)  # column percentages
+        >>> df.pita.add_totals().pita.add_percentages(ndigits=1, base=100)
+        >>> df.pita.add_totals().pita.add_percentages(interleaf=True)
         """
         return pct.add_percentages(
             self._obj,
@@ -389,7 +419,6 @@ class PitaFrame(PitaDisplayMixin):
         self,
         axis: Axis = 0,
         periods: int = 1,
-        method: diffs.DiffMethods = 'diff',
         label_n: str = 'n',
         label_diff: str = 'diff',
         ignore_keys: str | list[str] | None = None,
@@ -420,6 +449,12 @@ class PitaFrame(PitaDisplayMixin):
         pd.DataFrame
             Combined data with differences added. Adds one level to the
             column index to distinguish data from diffs.
+
+        Examples
+        --------
+        >>> df.pita.add_differences()
+        >>> df.pita.add_differences(axis=1, periods=2)
+        >>> df.pita.add_differences(interleaf=True)
         """
         return diffs.add_differences(
             self._obj,
@@ -468,6 +503,11 @@ class PitaFrame(PitaDisplayMixin):
         -------
         pd.DataFrame
             DataFrame with pct_change panel appended.
+
+        Examples
+        --------
+        >>> df.pita.add_pct_change()
+        >>> df.pita.add_pct_change(axis=1, periods=2)
         """
         return diffs.add_pct_change(
             self._obj,

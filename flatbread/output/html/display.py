@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import MISSING, dataclass, field, fields
-from typing import Any
+from typing import Any, Self
 
 from jinja2 import Environment, PackageLoader
 
@@ -121,8 +121,54 @@ class PitaDisplayMixin:
             self._template_mgr = TemplateManager()
         return self._template_mgr
 
-    def configure_display(self, **kwargs) -> "PitaDisplayMixin":
-        """Configure display options"""
+    def configure_display(self, **kwargs) -> Self:
+        """Configure display options for the flatbread-table web component.
+
+        Parameters
+        ----------
+        locale : str | None
+            Locale string for number and date formatting (e.g. 'en-US', 'nl-NL').
+        na_rep : str
+            String to display for null values. Default '-'.
+        margin_labels : set[str]
+            Labels to style as margin rows/columns.
+        collapse_columns : bool | None
+            Collapse column headers into the index header row.
+        max_rows : int
+            Maximum rows before truncating. Default 30.
+        max_columns : int
+            Maximum columns before truncating. Default 30.
+        trim_size : int
+            Number of head/tail rows to show when truncated. Default 5.
+        separator : str
+            String shown in separator cells. Default '...'.
+        no_wrap : bool
+            Prevent text wrapping in cells.
+        column_border_levels : int | None
+            Number of column group levels that get borders.
+        section_levels : int | None
+            Number of index levels to convert into section headers.
+        hide_group_borders : bool
+            Hide vertical borders between column groups.
+        hide_row_borders : bool
+            Hide horizontal borders between rows.
+        hide_thead_border : bool
+            Hide border below the header.
+        hide_index_border : bool
+            Hide border between index and data columns.
+        show_hover : bool
+            Enable row hover highlighting.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+
+        Examples
+        --------
+        >>> df.pita.configure_display(locale='en-US', show_hover=True)
+        >>> df.pita.configure_display(section_levels=1, hide_row_borders=True)
+        """
         self._config.update(**kwargs)
         return self
 

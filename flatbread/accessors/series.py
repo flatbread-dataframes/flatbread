@@ -49,6 +49,11 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.Series:
             Series with aggregated row added.
+
+        Examples
+        --------
+        >>> s.pita.add_agg('mean')
+        >>> s.pita.add_agg(lambda x: x.max() - x.min(), label='range')
         """
         return agg.add_agg(
             self._obj,
@@ -90,6 +95,10 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.Series:
             Table with aggregated rows added.
+
+        Examples
+        --------
+        >>> s.pita.add_subagg('mean', level=0)
         """
         return agg.add_agg(
             self._obj,
@@ -123,6 +132,11 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.Series:
             Series with totals row added.
+
+        Examples
+        --------
+        >>> s.pita.add_totals()
+        >>> s.pita.add_totals(label='sum')
         """
         return totals.add_totals( # type: ignore
             self._obj,
@@ -160,6 +174,11 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.Series:
             Series with subtotal rows added.
+
+        Examples
+        --------
+        >>> s.pita.add_subtotals(level=0)
+        >>> s.pita.add_subtotals(level=[0, 1], include_level_name=True)
         """
         return totals.add_subtotals( # type: ignore
             self._obj,
@@ -331,6 +350,11 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.DataFrame:
             DataFrame with the original Series and an additional column for the percentages.
+
+        Examples
+        --------
+        >>> s.pita.add_totals().pita.add_percentages()
+        >>> s.pita.add_totals().pita.add_percentages(ndigits=1, base=100)
         """
         return pct.add_percentages(
             self._obj,
@@ -373,6 +397,11 @@ class PitaSeries(PitaDisplayMixin):
         -------
         pd.DataFrame
             Two-column DataFrame with original values and differences.
+
+        Examples
+        --------
+        >>> s.pita.add_diffs()
+        >>> s.pita.add_diffs(periods=2)
         """
         return diffs.add_differences(
             self._obj,
