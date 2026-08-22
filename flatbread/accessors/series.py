@@ -290,7 +290,8 @@ class PitaSeries(PitaDisplayMixin):
             apportioned_rounding = apportioned_rounding,
         )
 
-    def as_pct(self, *args, **kwargs):
+    def as_pct(self, *args, **kwargs) -> pd.Series:
+        """Alias for :meth:`as_percentages`."""
         return self.as_percentages(*args, **kwargs)
 
     def add_percentages(
@@ -333,11 +334,12 @@ class PitaSeries(PitaDisplayMixin):
             apportioned_rounding = apportioned_rounding,
         )
 
-    def add_pct(self, *args, **kwargs):
+    def add_pct(self, *args, **kwargs) -> pd.DataFrame:
+        """Alias for :meth:`add_percentages`."""
         return self.add_percentages(*args, **kwargs)
 
     # region diffs
-    def add_diffs(
+    def add_differences(
         self,
         *,
         label_n: str | None = None,
@@ -371,6 +373,10 @@ class PitaSeries(PitaDisplayMixin):
             ignore_keys = ignore_keys,
             periods = periods,
         )
+
+    def add_diffs(self, *args, **kwargs) -> pd.DataFrame:
+        """Alias for :meth:`as_percentages`."""
+        return self.add_differences(*args, **kwargs)
 
     # region pct_change
     def add_pct_change(
