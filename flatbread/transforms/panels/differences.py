@@ -109,6 +109,7 @@ def _(
     axis: Axis = 0,
     periods: int = 1,
     method: DiffMethods = 'diff',
+    ignore_keys: str | list[str] | None = None,
     **kwargs,
 ) -> pd.DataFrame:
     """
@@ -123,25 +124,31 @@ def _(
     ----------
     data : pd.DataFrame
         Input data.
+    axis : {0, 1, 'index', 'columns'}
+        Axis along which to compute diffs. 0 for rows, 1 for columns.
     periods : int
         Number of periods to shift.
     method : {'diff', 'pct_change'}
         Differencing method to apply.
-    axis : {0, 1, 'index', 'columns'}
-        Axis along which to compute diffs. 0 for rows, 1 for columns.
-    label_diff : str
-        Label for the difference data.
+    ignore_keys : str or list[str] or None
+        Keys to exclude from diff computation. Keys from prior
+        flatbread operations are excluded automatically.
 
     Returns
     -------
     pd.DataFrame
-        Differenced data with consumed periods removed. Fewer rows
-        (axis=0) or columns (axis=1) than the input.
+        Differenced data with consumed periods and ignored keys
+        removed. Fewer rows (axis=0) or columns (axis=1) than the
+        input.
     """
-    to_diff = data.groupby(level=-2) if isinstance(data.index, pd.MultiIndex) else data
+    keys_to_ignore = chaining.resolve_ignored_keys(data, 'differences', ignore_keys)
+    mask = chaining.get_data_mask(data.index, keys_to_ignore)
+    filtered = data.loc[mask]
+
+    to_diff = filtered.groupby(level=-2) if isinstance(filtered.index, pd.MultiIndex) else filtered
     results = to_diff.apply(method, periods=periods).dropna(how='all')
     if axis == 1:
-        new_labels = pairwise_labels(data.index, periods=periods)
+        new_labels = pairwise_labels(filtered.index, periods=periods)
         results.index = new_labels
     return results
 

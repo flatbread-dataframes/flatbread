@@ -18,7 +18,7 @@
             "label_pct": "pct",
             "ndigits": -1,
             "base": 1,
-            "ignore_transforms": ["percentages"]
+            "ignore_transforms": []
         },
         "differences": {
             "label_n": "n",

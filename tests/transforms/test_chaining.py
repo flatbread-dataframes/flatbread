@@ -225,7 +225,7 @@ class TestChain_TotalsDifferences(unittest.TestCase):
         )
         diff_data = result[diff_label]
         totals_label = DEFAULTS['transforms']['totals']['label']
-        self.assertNotIn(totals_label, diff_data.index)
+        self.assertTrue(diff_data.loc[totals_label].isna().all())
 
     def test_diff_values_correct(self):
         with_totals = self.df.pipe(totals.add_totals, axis=0)
@@ -234,9 +234,17 @@ class TestChain_TotalsDifferences(unittest.TestCase):
         diff_label = next(
             k for k, v in panels.items() if v['type'] == 'differences'
         )
-        # first column: values are 10, 20, 30, 40, 50 → diffs are 10, 10, 10, 10
+        totals_label = DEFAULTS['transforms']['totals']['label']
         diff_col = result[diff_label].iloc[:, 0]
-        self.assertTrue((diff_col == 10).all())
+
+        # first data row has no predecessor, margin row was excluded
+        self.assertTrue(pd.isna(diff_col.loc['r0']))
+        self.assertTrue(pd.isna(diff_col.loc[totals_label]))
+
+        # remaining data rows: values are 10, 20, 30, 40, 50 → constant diff of 10
+        data_diffs = diff_col.loc[['r1', 'r2', 'r3', 'r4']]
+        expected = pd.Series([10.0] * 4, index=['r1', 'r2', 'r3', 'r4'])
+        pd.testing.assert_series_equal(data_diffs, expected, check_names=False)
 
 
 # region totals → pct → diffs
