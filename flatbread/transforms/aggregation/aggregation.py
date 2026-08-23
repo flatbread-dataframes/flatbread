@@ -107,9 +107,11 @@ def create_single_index_row(
 def add_agg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
+    *,
     label: str|None = None,
     ignore_keys: str|list[str]|None = None,
     _fill: str|None = '',
+    **kwargs,
 ) -> pd.DataFrame:
     data = df.copy()
     label = get_label(label, aggfunc)
@@ -132,12 +134,14 @@ def add_agg(
 def add_subagg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
+    *,
     level: Level = 0,
     label: str|None = None,
     include_level_name: bool = False,
     ignore_keys: str|list[str]|None = None,
     skip_single_rows: bool = True,
     _fill = '',
+    **kwargs,
 ):
     return _build_subagg(
         df.copy(),

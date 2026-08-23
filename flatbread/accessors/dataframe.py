@@ -30,6 +30,7 @@ class PitaFrame(PitaDisplayMixin):
     def add_agg(
         self,
         aggfunc: str|Callable,
+        *,
         axis: Axis = 0,
         label: str|None = None,
         ignore_keys: str|list[str]|None = None,
@@ -72,6 +73,7 @@ class PitaFrame(PitaDisplayMixin):
     def add_subagg(
         self,
         aggfunc: str|Callable,
+        *,
         axis: Axis = 0,
         level: int|str|list[int|str] = 0,
         label: str|None = None,
