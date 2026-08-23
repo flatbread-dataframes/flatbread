@@ -1,0 +1,1 @@
+{"values":[[1,4,5],[2,5,7],[3,6,9],[6,15,21]],"columns":{"values":["A","B","Totals"],"names":[null],"dtypes":["int","int","int"],"formatOptions":[null,null,null]},"index":{"values":["x","y","z","Totals"],"names":["row"],"dtypes":["str"],"formatOptions":[null]}}

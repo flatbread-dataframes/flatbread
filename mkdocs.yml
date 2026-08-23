@@ -1,0 +1,28 @@
+site_name: Flatbread
+site_description: Pandas extension for aggregation and tabular display
+repo_url: https://github.com/flatbread-dataframes/flatbread
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_root_heading: true
+            show_source: false
+            members_order: source
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - PitaFrame: api/dataframe.md
+    - PitaSeries: api/series.md
+    - Display: api/display.md
+
+hooks:
+  - docs/hooks/flatbread_table.py
