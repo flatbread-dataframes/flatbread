@@ -1,4 +1,5 @@
 site_name: Flatbread
+site_url: https://flatbread-dataframes.github.io/flatbread/
 site_description: Pandas extension for aggregation and tabular display
 repo_url: https://github.com/flatbread-dataframes/flatbread
 
