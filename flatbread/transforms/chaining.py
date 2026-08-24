@@ -119,20 +119,10 @@ def resolve_margin_labels(attrs: dict | None = None) -> set[str]:
     set[str]
         All margin labels (default and custom).
     """
+    tracked = (attrs or {}).get('flatbread', {}).get('labels', {})
     margin_labels = set()
-    transforms = DEFAULTS.get('transforms', {})
-    attr_labels = (attrs or {}).get('flatbread', {}).get('labels', {})
-
-    for transform_name, transform_config in transforms.items():
-        for margin_label in transform_config.get('margin_labels', []):
-            if margin_label in transform_config:
-                label_value = transform_config[margin_label]
-                if label_value is not None:
-                    margin_labels.add(label_value)
-
-        tracked = attr_labels.get(transform_name, set())
-        margin_labels.update(tracked)
-
+    for labels in tracked.values():
+        margin_labels.update(labels)
     return margin_labels
 
 
@@ -178,7 +168,10 @@ def resolve_ignored_keys(data, transform_name, ignore_keys=None):
 
 
 # region tag labels
-def track_margin_labels(transform: str) -> Callable:
+def track_margin_labels(
+    transform: str,
+    key_params: list[str] | None = None,
+) -> Callable:
     """
     Tag labels produced by flatbread operations for tracking in chained operations.
 
@@ -213,29 +206,21 @@ def track_margin_labels(transform: str) -> Callable:
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(data: PandasObj, *args, **kwargs) -> PandasObj:
-            # Get transform configuration from transforms section
-            transform_config = DEFAULTS.get('transforms', {}).get(transform, {})
-            key_label_params = transform_config.get('key_labels', [])
-
-            # Extract the actual label values from function parameters
+            params = key_params or ['label']
             labels_to_track = []
-            for param_name in key_label_params:
+            for param_name in params:
                 if param_name in kwargs and kwargs[param_name] is not None:
                     labels_to_track.append(kwargs[param_name])
 
-            # Execute the original function
             result = func(data, *args, **kwargs)
 
-            # Get existing tracked labels for this transform
             existing_labels = get_nested_key(
                 result.attrs,
                 ['flatbread', 'labels', transform]
             ) or set()
 
-            # Combine existing and new labels
             all_labels = existing_labels.union(labels_to_track)
 
-            # Store updated labels in result attrs
             if not hasattr(result, 'attrs'):
                 result.attrs = {}
 

@@ -2,15 +2,11 @@
     "transforms": {
         "totals": {
             "label": "Totals",
-            "key_labels": ["label"],
-            "margin_labels": ["label"],
             "ignore_transforms": ["totals", "percentages", "differences"]
         },
         "subtotals": {
             "label": "Subtotals",
             "include_level_name": false,
-            "key_labels": ["label"],
-            "margin_labels": ["label"],
             "ignore_transforms": ["totals", "percentages", "differences"]
         },
         "percentages": {
