@@ -1,0 +1,1 @@
+{"values":[[12500,11800,90],[8300,9100,130],[15200,14600,80]],"columns":{"values":["budget","spent","sightings"],"names":[null],"dtypes":["int","int","int"],"formatOptions":[{"style":"currency","currency":"EUR"},{"style":"currency","currency":"EUR"},null]},"index":{"values":["Coast","Forest","Wetland"],"names":["region"],"dtypes":["str"],"formatOptions":[null]}}

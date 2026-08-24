@@ -43,6 +43,8 @@ nav:
     - Getting Started: guide/getting-started.md
     - Aggregation: guide/aggregation.md
     - Panels: guide/panels.md
+    - Configuration: guide/configuration.md
+    - Formatting: guide/formatting.md
     - Display & Export: guide/display.md
   - API Reference:
     - PitaFrame: api/dataframe.md

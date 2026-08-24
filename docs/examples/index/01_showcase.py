@@ -11,5 +11,5 @@ result = (
     )
     .pita.add_subtotals(axis=0, level=0)
     .pita.add_totals()
-    .pita.add_percentages(axis=0, ndigits=1, interleaf=True)
+    .pita.add_percentages(axis=0, interleaf=True)
 )

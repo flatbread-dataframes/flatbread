@@ -1,6 +1,8 @@
 from pathlib import Path
 import importlib.util
 
+from flatbread.output.html.display import PitaDisplayMixin
+
 
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 OUTPUT_DIR = Path(__file__).parent / "assets" / "examples"
@@ -30,7 +32,10 @@ def build():
         out_dir.mkdir(parents=True, exist_ok=True)
 
         out = out_dir / f"{path.stem}.json"
-        out.write_text(result.pita.get_json())
+        if isinstance(result, PitaDisplayMixin):
+            out.write_text(result.get_json())
+        else:
+            out.write_text(result.pita.get_json())
         print(f"  {relative} -> {out.name}")
 
 

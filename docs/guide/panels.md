@@ -59,18 +59,6 @@ viewer automatically formats these as percentages when it detects the
 panel label. Use `base=100` if you need literal percentage values
 (e.g. for export or further calculation).
 
-### Interleaving
-
-By default, panels are grouped: all count columns first, then all
-percentage columns. Set `interleaf=True` to place each percentage column
-next to its corresponding count column:
-
-```python
---8<-- "examples/panels/03_interleaved.py"
-```
-
-<flatbread-table src="/assets/examples/panels/03_interleaved.json" margin-labels="Totals" hide-settings-menu></flatbread-table>
-
 ## Differences
 
 `add_differences` computes the difference between consecutive values
@@ -108,6 +96,44 @@ which panels exist and excludes them from subsequent calculations:
 df.pita.add_totals().pita.add_percentages().pita.add_differences()
 ```
 
-Interleaving is available when all panels are of the same type. Panels
-with different shapes — such as percentages and differences — cannot be
-interleaved together.
+## Interleaving
+
+By default, panels are grouped: all data columns first, then all
+panel columns. Set `interleaf=True` to place panel columns next to
+their corresponding data columns:
+
+```python
+--8<-- "examples/panels/03_interleaved.py"
+```
+
+<flatbread-table src="/assets/examples/panels/03_interleaved.json" margin-labels="Totals" hide-settings-menu></flatbread-table>
+
+### Symmetric vs group interleaving
+
+How interleaving works depends on the panel shape. Percentages and
+differences along axis=0 produce a panel with the same columns as the
+data — one panel column per data column. Interleaving pairs them
+one-to-one:
+
+```python
+df.pita.add_totals().pita.add_percentages(interleaf=True)
+# → Spring | Spring pct | Summer | Summer pct | ...
+```
+
+Differences and percentage change along axis=1 produce fewer columns
+than the data, since each value compares two adjacent columns. These
+panels can only be interleaved when the original data has more than
+one column level (e.g. region and season). In that case, interleaving
+places the data and diff columns together within each group rather
+than pairing them one-to-one:
+
+```python
+# columns: (region, season)
+df.pita.add_differences(axis=1, interleaf=True)
+# Coast:  Spring | Summer | Autumn | Spring-Summer | Summer-Autumn
+# Forest: Spring | Summer | Autumn | Spring-Summer | Summer-Autumn
+```
+
+Panels with the same column structure can be interleaved together,
+but the two shapes cannot be mixed. Call `interleave()` at the end
+of the chain, after all panels have been added.
