@@ -53,8 +53,13 @@ def validate(data: pd.DataFrame) -> str:
             f"({', '.join(symmetric)}) with asymmetric panels "
             f"({', '.join(asymmetric)})."
         )
-
-    return 'asymmetric' if asymmetric else 'symmetric'
+    structure_type = 'asymmetric' if asymmetric else 'symmetric'
+    if structure_type == 'asymmetric' and data.columns.nlevels < 3:
+        raise ValueError(
+            "Cannot interleave asymmetric panels with fewer than 3 column levels. "
+            "Interleaving requires group structure to anchor paired values."
+        )
+    return structure_type
 
 
 def interleave(df: pd.DataFrame) -> pd.DataFrame:
