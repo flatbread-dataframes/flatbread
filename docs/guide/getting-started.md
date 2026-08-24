@@ -63,6 +63,8 @@ started examples use the `add_*` form. Both are covered in detail in the
 
 ## Next steps
 
-- [Aggregation](aggregation.md) — subtotals, custom aggregations, sorting, chaining
-- [Panels](panels.md) — percentages, differences, percentage change, interleaving
-- [Display & Export](display-export.md) — table styling, formatting, Excel export
+- [Aggregation](guide/aggregation.md) — totals, subtotals, custom aggregations, sorting
+- [Panels](guide/panels.md) — percentages, differences, percentage change, interleaving
+- [Configuration](guide/configuration.md) — config files, layering, runtime overrides
+- [Formatting](guide/formatting.md) — format presets, manual formatting, pattern matching
+- [Display & Export](guide/display.md) — table styling, Excel export
