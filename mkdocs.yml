@@ -4,7 +4,19 @@ repo_url: https://github.com/flatbread-dataframes/flatbread
 
 theme:
   name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   custom_dir: docs/overrides
+  features:
+    - content.code.copy
+    - navigation.tabs
 
 plugins:
   - search
@@ -17,8 +29,21 @@ plugins:
             show_source: false
             members_order: source
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: docs
+
 nav:
   - Home: index.md
+  - Guide:
+    - Getting Started: guide/getting-started.md
+    - Aggregation: guide/aggregation.md
+    - Panels: guide/panels.md
+    - Display & Export: guide/display.md
   - API Reference:
     - PitaFrame: api/dataframe.md
     - PitaSeries: api/series.md
@@ -26,3 +51,4 @@ nav:
 
 hooks:
   - docs/hooks/flatbread_table.py
+  - docs/hooks/build_examples.py

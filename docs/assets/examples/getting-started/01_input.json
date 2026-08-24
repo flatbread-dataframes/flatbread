@@ -1,0 +1,1 @@
+{"values":[[5,16,3],[8,20,12],[12,10,6],[15,5,10],[8,4,20],[12,4,16],[5,15,8],[14,14,10],[8,16,24]],"columns":{"values":["Coast","Forest","Wetland"],"names":["region"],"dtypes":["int","int","int"],"formatOptions":[null,null,null]},"index":{"values":["Badger","Deer","Fox","Hawk","Heron","Lizard","Owl","Rabbit","Turtle"],"names":["species"],"dtypes":["str"],"formatOptions":[null]}}

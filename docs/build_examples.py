@@ -1,6 +1,5 @@
 from pathlib import Path
 import importlib.util
-import sys
 
 
 EXAMPLES_DIR = Path(__file__).parent / "examples"
@@ -15,19 +14,24 @@ def load_module(path: Path):
 
 
 def build():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    for path in sorted(EXAMPLES_DIR.glob("*.py")):
-        module = load_module(path)
-        examples = getattr(module, "examples", None)
-        if examples is None:
-            print(f"  skipping {path.name}: no 'examples' dict found")
+    for path in sorted(EXAMPLES_DIR.rglob("*.py")):
+        if path.name.startswith("_"):
             continue
 
-        for name, df in examples.items():
-            out = OUTPUT_DIR / f"{name}.json"
-            out.write_text(df.pita.get_json())
-            print(f"  {path.name} -> {out.name}")
+        module = load_module(path)
+        result = getattr(module, "result", None)
+        if result is None:
+            print(f"  skipping {path.name}: no 'result' found")
+            continue
+
+        # mirror subfolder structure in output
+        relative = path.relative_to(EXAMPLES_DIR)
+        out_dir = OUTPUT_DIR / relative.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        out = out_dir / f"{path.stem}.json"
+        out.write_text(result.pita.get_json())
+        print(f"  {relative} -> {out.name}")
 
 
 if __name__ == "__main__":

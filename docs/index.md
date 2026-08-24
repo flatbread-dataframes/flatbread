@@ -1,40 +1,30 @@
 # Flatbread
 
-Flatbread extends pandas with tabulation features. Access it through the `pita` accessor on DataFrames and Series.
-
-## Features
-
-- Totals and subtotals (rows and columns)
-- Percentages, differences, percentage change
-- Custom aggregations
-- Interactive table display for Jupyter notebooks via [wc-simple-table](https://github.com/lcvriend/wc-simple-table) ([examples](https://lcvriend.github.io/wc-simple-table/))
-
-## Quick Example
+Flatbread is a pandas extension for tabulation — totals, subtotals,
+percentages, differences, and more. It registers a `pita` accessor on
+DataFrames and Series.
 
 ```python
-import pandas as pd
-import flatbread
-
-df = pd.DataFrame(...)
-
-result = (
-    df
-    .pita.add_totals()
-    .pita.add_subtotals(level=0)
-    .pita.add_percentages()
-)
-
-result.pita.configure_display(
-    locale="en-US",
-    show_hover=True,
-    section_levels=1,
-)
+--8<-- "examples/index/01_showcase.py"
 ```
 
-<flatbread-table src="assets/examples/totals_basic.json" margin-labels="Totals" hide-settings-menu></flatbread-table>
+<flatbread-table src="/assets/examples/index/01_showcase.json" margin-labels="Subtotals;Totals" section-levels="1" hide-row-borders hide-settings-menu></flatbread-table>
 
 ## Installation
 
 ```bash
 pip install flatbread
 ```
+
+## Guide
+
+- [Getting Started](guide/getting-started.md) — install, import, basic pipeline
+- [Aggregation](guide/aggregation.md) — totals, subtotals, custom aggregations, sorting
+- [Panels](guide/panels.md) — percentages, differences, percentage change, interleaving
+- [Display & Export](guide/display-export.md) — table styling, Excel export
+
+## API Reference
+
+- [PitaFrame](api/dataframe.md) — DataFrame accessor
+- [PitaSeries](api/series.md) — Series accessor
+- [Display](api/display.md) — display configuration
