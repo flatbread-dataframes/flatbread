@@ -5,7 +5,7 @@ result = (
     pd.read_json("docs/examples/sightings.json")
     .pivot_table(
         index = ["class", "species"],
-        columns = "region",
+        columns = "season",
         values = "count",
         aggfunc = "sum",
     )

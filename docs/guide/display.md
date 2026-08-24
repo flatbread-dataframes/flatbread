@@ -32,10 +32,6 @@ As HTML:
 
 <flatbread-table src="/assets/examples/display/02_hierarchical.json" margin-labels="Subtotals;Totals" section-levels="1" hide-settings-menu></flatbread-table>
 
-Without section headers, the same table looks like this:
-
-<flatbread-table src="/assets/examples/display/02_hierarchical.json" margin-labels="Subtotals;Totals" hide-settings-menu></flatbread-table>
-
 ## Collapsing column headers
 
 By default `flatbread-table` will merge the header row into the index header, to prevent this behavior
@@ -80,7 +76,6 @@ As HTML:
 <flatbread-table
     src="data.json"
     margin-labels="Subtotals;Totals"
-    section-levels="1"
     show-hover
     hide-row-borders
     hide-index-border
@@ -88,7 +83,7 @@ As HTML:
 ></flatbread-table>
 ```
 
-<flatbread-table src="/assets/examples/display/02_hierarchical.json" margin-labels="Subtotals;Totals" section-levels="1" show-hover hide-row-borders hide-index-border hide-settings-menu></flatbread-table>
+<flatbread-table src="/assets/examples/display/02_hierarchical.json" margin-labels="Subtotals;Totals" show-hover hide-row-borders hide-index-border hide-settings-menu></flatbread-table>
 
 ## Margin labels
 
