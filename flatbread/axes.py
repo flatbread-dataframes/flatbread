@@ -438,3 +438,182 @@ def add_value_to_key(
     else:
         key.insert(level + 1, value)
     return tuple(key)
+
+
+# region merge levels
+@singledispatch
+def merge_levels(
+    data,
+    level_a: Level,
+    level_b: Level,
+    axis: Axis = 0,
+):
+    raise NotImplementedError('No implementation for this type')
+
+
+@merge_levels.register
+def _(
+    data: pd.DataFrame,
+    level_a: Level,
+    level_b: Level,
+    axis: Axis = 0,
+) -> pd.DataFrame:
+    """
+    Merge two levels of a MultiIndex into one.
+
+    For each position, if one level's value is duplicated while the other's
+    is unique, the unique value is kept. If both are unique (conflict),
+    the value from ``level_a`` takes priority.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Input DataFrame.
+    level_a : Level
+        First level (priority on conflict).
+    level_b : Level
+        Second level.
+    axis : Axis, default 0
+        Axis to modify (0 for index, 1 for columns).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with the two levels merged into one.
+    """
+    data = data.copy()
+    ax = resolve_axis(axis)
+    target = data.axes[ax]
+    new_index = _merge_index_levels(target, level_a, level_b)
+    if ax == 0:
+        data.index = new_index
+    else:
+        data.columns = new_index
+    return data
+
+
+@merge_levels.register
+def _(
+    data: pd.Series,
+    level_a: Level,
+    level_b: Level,
+    axis: Axis = 0,
+) -> pd.Series:
+    """
+    Merge two levels of a Series MultiIndex into one.
+
+    Parameters
+    ----------
+    data : pd.Series
+        Input Series.
+    level_a : Level
+        First level (priority on conflict).
+    level_b : Level
+        Second level.
+    axis : Axis
+        Ignored for Series (always index).
+
+    Returns
+    -------
+    pd.Series
+        Series with the two levels merged into one.
+    """
+    data = data.copy()
+    data.index = _merge_index_levels(data.index, level_a, level_b)
+    return data
+
+
+def _merge_index_levels(
+    index: pd.MultiIndex,
+    level_a: Level,
+    level_b: Level,
+) -> pd.Index:
+    """
+    Merge two levels of a MultiIndex, preferring unique values over duplicates.
+
+    For each position, uniqueness is determined within the group defined by
+    all levels not involved in the merge. If one level's value is duplicated
+    within its group while the other's is unique, the unique value is kept.
+    If both are unique (conflict), ``level_a`` takes priority.
+
+    Parameters
+    ----------
+    index : pd.MultiIndex
+        The MultiIndex to merge levels on.
+    level_a : Level
+        First level (priority on conflict).
+    level_b : Level
+        Second level.
+
+    Returns
+    -------
+    pd.Index or pd.MultiIndex
+        Index with the two levels replaced by a single merged level.
+    """
+    if not isinstance(index, pd.MultiIndex):
+        raise ValueError("Cannot merge levels on an index with a single level.")
+
+    a = resolve_level(index, level_a)
+    b = resolve_level(index, level_b)
+
+    values_a = index.get_level_values(a)
+    values_b = index.get_level_values(b)
+
+    duped_a, duped_b = _grouped_duplicated(index, a, b)
+    merged = values_b.where(duped_a & ~duped_b, values_a)
+
+    # rebuild without level_b, replacing level_a with merged
+    arrays = []
+    names = []
+    for i in range(index.nlevels):
+        if i == b:
+            continue
+        arrays.append(merged if i == a else index.get_level_values(i))
+        names.append(index.names[i])
+
+    if len(arrays) == 1:
+        return pd.Index(arrays[0], name=names[0])
+    return pd.MultiIndex.from_arrays(arrays, names=names)
+
+
+def _grouped_duplicated(
+    index: pd.MultiIndex,
+    a: int,
+    b: int,
+) -> tuple[pd.Series, pd.Series]:
+    """
+    Check duplication of two levels within groups defined by the remaining levels.
+
+    Parameters
+    ----------
+    index : pd.MultiIndex
+        The MultiIndex to check.
+    a : int
+        Resolved position of the first level.
+    b : int
+        Resolved position of the second level.
+
+    Returns
+    -------
+    tuple[pd.Series, pd.Series]
+        Boolean series indicating whether each value in level ``a`` and ``b``
+        is duplicated within its group.
+    """
+    other_levels = [i for i in range(index.nlevels) if i not in (a, b)]
+
+    values_a = index.get_level_values(a)
+    values_b = index.get_level_values(b)
+
+    if not other_levels:
+        return (
+            values_a.duplicated(keep=False),
+            values_b.duplicated(keep=False),
+        )
+
+    group = pd.MultiIndex.from_arrays(
+        [index.get_level_values(i) for i in other_levels]
+    )
+    tmp = pd.DataFrame({'group': group, 'a': values_a, 'b': values_b})
+    duped_a = tmp.groupby('group')['a'].transform(lambda s: s.duplicated(keep=False))
+    duped_b = tmp.groupby('group')['b'].transform(lambda s: s.duplicated(keep=False))
+    return duped_a.astype(bool), duped_b.astype(bool)

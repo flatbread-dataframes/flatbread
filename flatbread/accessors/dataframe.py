@@ -591,6 +591,35 @@ class PitaFrame(PitaDisplayMixin):
             axis = axis,
         )
 
+    def merge_levels(
+        self,
+        level_a: Level,
+        level_b: Level,
+        axis: Axis = 0,
+    ) -> pd.DataFrame:
+        """
+        Merge two levels of a MultiIndex into one.
+
+        For each position, if one level's value is duplicated while the other's
+        is unique, the unique value is kept. If both are unique (conflict),
+        the value from ``level_a`` takes priority.
+
+        Parameters
+        ----------
+        level_a : Level
+            First level (priority on conflict).
+        level_b : Level
+            Second level.
+        axis : Axis, default 0
+            Axis to modify (0 for index, 1 for columns).
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with the two levels merged into one.
+        """
+        return axes.merge_levels(self._obj, level_a, level_b, axis=axis)
+
     # region interleave
     def interleave(self) -> pd.DataFrame:
         """

@@ -520,3 +520,29 @@ class PitaSeries(PitaDisplayMixin):
             level_name = level_name,
             axis = axis,
         )
+
+    def merge_levels(
+        self,
+        level_a: Level,
+        level_b: Level,
+    ) -> pd.Series:
+        """
+        Merge two levels of the index into one.
+
+        For each position, if one level's value is duplicated while the other's
+        is unique, the unique value is kept. If both are unique (conflict),
+        the value from ``level_a`` takes priority.
+
+        Parameters
+        ----------
+        level_a : Level
+            First level (priority on conflict).
+        level_b : Level
+            Second level.
+
+        Returns
+        -------
+        pd.Series
+            Series with the two levels merged into one.
+        """
+        return axes.merge_levels(self._obj, level_a, level_b)

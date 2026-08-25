@@ -148,6 +148,135 @@ class TestAddLevel_Series(unittest.TestCase):
         pd.testing.assert_index_equal(self.s.index, original_index)
 
 
+# region merge_levels
+class TestMergeLevels_Validation(unittest.TestCase):
+    def test_non_multiindex_raises(self):
+        df = pd.DataFrame({'A': [1, 2]}, index=pd.Index(['a', 'b']))
+        self.assertRaises(ValueError, axes.merge_levels, df, 0, 1)
+
+
+class TestMergeLevels_TwoLevels(unittest.TestCase):
+    def setUp(self):
+        self.index = pd.MultiIndex.from_tuples([
+            ('2024', '2024'),
+            ('2025', '2025'),
+            ('2025', 'Δ'),
+            ('2025', 'Δ%'),
+        ], names=['year', 'label'])
+        self.df = pd.DataFrame({'v': range(4)}, index=self.index)
+
+    def test_prefers_unique_value(self):
+        result = axes.merge_levels(self.df, 0, 1)
+        expected = pd.Index(['2024', '2025', 'Δ', 'Δ%'], name='year')
+        pd.testing.assert_index_equal(result.index, expected)
+
+    def test_returns_plain_index(self):
+        result = axes.merge_levels(self.df, 0, 1)
+        self.assertNotIsInstance(result.index, pd.MultiIndex)
+
+
+class TestMergeLevels_ThreeLevels(unittest.TestCase):
+    def setUp(self):
+        self.index = pd.MultiIndex.from_tuples([
+            ('ingeschreven', '2024', '2024'),
+            ('ingeschreven', '2025', '2025'),
+            ('ingeschreven', '2025', 'Δ'),
+            ('verzoek',      '2024', '2024'),
+            ('verzoek',      '2025', '2025'),
+            ('verzoek',      '2025', 'Δ'),
+        ], names=['status', 'year', 'label'])
+        self.df = pd.DataFrame({'v': range(6)}, index=self.index)
+
+    def test_grouped_prefers_unique(self):
+        result = axes.merge_levels(self.df, 1, 2)
+        expected = pd.MultiIndex.from_tuples([
+            ('ingeschreven', '2024'),
+            ('ingeschreven', '2025'),
+            ('ingeschreven', 'Δ'),
+            ('verzoek',      '2024'),
+            ('verzoek',      '2025'),
+            ('verzoek',      'Δ'),
+        ], names=['status', 'year'])
+        pd.testing.assert_index_equal(result.index, expected)
+
+    def test_returns_multiindex(self):
+        result = axes.merge_levels(self.df, 1, 2)
+        self.assertIsInstance(result.index, pd.MultiIndex)
+        self.assertEqual(result.index.nlevels, 2)
+
+
+class TestMergeLevels_Priority(unittest.TestCase):
+    def setUp(self):
+        # both levels unique at every position → conflict
+        self.index = pd.MultiIndex.from_tuples([
+            ('a', 'x'),
+            ('b', 'y'),
+            ('c', 'z'),
+        ], names=['L0', 'L1'])
+        self.df = pd.DataFrame({'v': range(3)}, index=self.index)
+
+    def test_priority_level_a(self):
+        result = axes.merge_levels(self.df, 0, 1)
+        expected = pd.Index(['a', 'b', 'c'], name='L0')
+        pd.testing.assert_index_equal(result.index, expected)
+
+    def test_priority_level_b(self):
+        result = axes.merge_levels(self.df, 1, 0)
+        expected = pd.Index(['x', 'y', 'z'], name='L1')
+        pd.testing.assert_index_equal(result.index, expected)
+
+
+class TestMergeLevels_BothDuplicated(unittest.TestCase):
+    def test_falls_back_to_level_a(self):
+        index = pd.MultiIndex.from_tuples([
+            ('a', 'x'),
+            ('a', 'x'),
+        ], names=['L0', 'L1'])
+        df = pd.DataFrame({'v': [1, 2]}, index=index)
+        result = axes.merge_levels(df, 0, 1)
+        expected = pd.Index(['a', 'a'], name='L0')
+        pd.testing.assert_index_equal(result.index, expected)
+
+
+class TestMergeLevels_ByName(unittest.TestCase):
+    def test_string_level_spec(self):
+        index = pd.MultiIndex.from_tuples([
+            ('2024', '2024'),
+            ('2025', '2025'),
+            ('2025', 'Δ'),
+        ], names=['year', 'label'])
+        df = pd.DataFrame({'v': range(3)}, index=index)
+        result = axes.merge_levels(df, 'year', 'label')
+        expected = pd.Index(['2024', '2025', 'Δ'], name='year')
+        pd.testing.assert_index_equal(result.index, expected)
+
+
+class TestMergeLevels_Axis(unittest.TestCase):
+    def test_columns_axis(self):
+        columns = pd.MultiIndex.from_tuples([
+            ('2024', '2024'),
+            ('2025', '2025'),
+            ('2025', 'Δ'),
+        ], names=['year', 'label'])
+        df = pd.DataFrame([[1, 2, 3]], columns=columns)
+        result = axes.merge_levels(df, 0, 1, axis=1)
+        expected = pd.Index(['2024', '2025', 'Δ'], name='year')
+        pd.testing.assert_index_equal(result.columns, expected)
+
+
+class TestMergeLevels_Series(unittest.TestCase):
+    def test_series(self):
+        index = pd.MultiIndex.from_tuples([
+            ('2024', '2024'),
+            ('2025', '2025'),
+            ('2025', 'Δ'),
+        ], names=['year', 'label'])
+        s = pd.Series(range(3), index=index)
+        result = axes.merge_levels(s, 0, 1)
+        expected = pd.Index(['2024', '2025', 'Δ'], name='year')
+        pd.testing.assert_index_equal(result.index, expected)
+
+
 # region sort_aggregates
 class TestSortAggregates(unittest.TestCase):
     def setUp(self):
