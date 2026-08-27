@@ -14,7 +14,6 @@ import flatbread.transforms.chaining as chaining
 
 # region totals
 @tooling.inject_defaults(DEFAULTS['transforms']['totals'])
-@chaining.track_margin_labels('totals')
 def add_totals(
     data: pd.DataFrame|pd.Series,
     axis: Axis|Literal[2, 'both'] = 2,
@@ -27,7 +26,7 @@ def add_totals(
     keys_to_ignore = chaining.resolve_ignored_keys(data, 'totals', ignore_keys)
 
     if axis < 2:
-        output = agg.add_agg(
+        result = agg._add_agg(
             data,
             'sum',
             axis = axis,
@@ -36,7 +35,7 @@ def add_totals(
             _fill = _fill
         )
     else:
-        output = (
+        result = (
             data
             .pipe(
                 add_totals,
@@ -53,66 +52,11 @@ def add_totals(
                 _fill = _fill,
             )
         )
-    return output
+    chaining.track_labels(result, 'totals', [label])
+    return result
 
 
 # region subtotals
-@tooling.inject_defaults(DEFAULTS['transforms']['subtotals'])
-@chaining.track_margin_labels('totals')
-def _add_subtotals(
-    data: pd.DataFrame|pd.Series,
-    axis: Axis = 0,
-    level: Level = 0,
-    label: str|None = 'Subtotals',
-    include_level_name: bool = False,
-    ignore_keys: str|list[str]|None = None,
-    skip_single_rows: bool = True,
-    _fill: str = '',
-    **kwargs,
-) -> pd.DataFrame|pd.Series:
-    """Single-level subtotals implementation with tagging."""
-    axis = axes.resolve_axis(axis)
-    keys_to_ignore = chaining.resolve_ignored_keys(data, 'subtotals', ignore_keys)
-
-    if axis < 2:
-        return agg.add_subagg(
-            data,
-            'sum',
-            axis=axis,
-            level=level,  # Single level only
-            label=label,
-            include_level_name=include_level_name,
-            ignore_keys=keys_to_ignore,
-            skip_single_rows=skip_single_rows,
-            _fill=_fill,
-        )
-    else:
-        output = (
-            data
-            .pipe(
-                _add_subtotals,
-                axis=0,
-                level=level,
-                label=label,
-                include_level_name=include_level_name,
-                ignore_keys=keys_to_ignore,
-                skip_single_rows=skip_single_rows,
-                _fill=_fill,
-            )
-            .pipe(
-                _add_subtotals,
-                axis=1,
-                level=level,
-                label=label,
-                include_level_name=include_level_name,
-                ignore_keys=keys_to_ignore,
-                skip_single_rows=skip_single_rows,
-                _fill=_fill,
-            )
-        )
-        return output
-
-
 def add_subtotals(
     data: pd.DataFrame|pd.Series,
     axis: Axis = 0,
@@ -228,6 +172,62 @@ def add_subtotals(
             skip_single_rows=skip_single_rows,
             _fill=_fill,
         )
+    return result
+
+
+@tooling.inject_defaults(DEFAULTS['transforms']['subtotals'])
+def _add_subtotals(
+    data: pd.DataFrame|pd.Series,
+    axis: Axis = 0,
+    level: Level = 0,
+    label: str|None = 'Subtotals',
+    include_level_name: bool = False,
+    ignore_keys: str|list[str]|None = None,
+    skip_single_rows: bool = True,
+    _fill: str = '',
+    **kwargs,
+) -> pd.DataFrame|pd.Series:
+    """Single-level subtotals implementation."""
+    axis = axes.resolve_axis(axis)
+    keys_to_ignore = chaining.resolve_ignored_keys(data, 'subtotals', ignore_keys)
+
+    if axis < 2:
+        result = agg._add_subagg(
+            data,
+            'sum',
+            axis = axis,
+            level = level,
+            label = label,
+            include_level_name = include_level_name,
+            ignore_keys = keys_to_ignore,
+            skip_single_rows = skip_single_rows,
+            _fill = _fill,
+        )
+    else:
+        result = (
+            data
+            .pipe(
+                _add_subtotals,
+                axis = 0,
+                level = level,
+                label = label,
+                include_level_name = include_level_name,
+                ignore_keys = keys_to_ignore,
+                skip_single_rows = skip_single_rows,
+                _fill = _fill,
+            )
+            .pipe(
+                _add_subtotals,
+                axis = 1,
+                level = level,
+                label = label,
+                include_level_name = include_level_name,
+                ignore_keys = keys_to_ignore,
+                skip_single_rows = skip_single_rows,
+                _fill = _fill,
+            )
+        )
+    chaining.track_labels(result, 'totals', [label])
     return result
 
 

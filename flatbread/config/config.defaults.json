@@ -2,12 +2,24 @@
     "transforms": {
         "totals": {
             "label": "Totals",
-            "ignore_transforms": ["totals", "percentages", "differences"]
+            "ignore_transforms": [
+                "totals",
+                "aggregation",
+                "percentages",
+                "differences",
+                "pct_change"
+            ]
         },
         "subtotals": {
             "label": "Subtotals",
             "include_level_name": false,
-            "ignore_transforms": ["totals", "percentages", "differences"]
+            "ignore_transforms": [
+                "totals",
+                "aggregation",
+                "percentages",
+                "differences",
+                "pct_change"
+            ]
         },
         "percentages": {
             "label_n": "n",
@@ -19,12 +31,24 @@
         "differences": {
             "label_n": "n",
             "label_diff": "diff",
-            "ignore_transforms": ["totals", "percentages", "differences", "pct_change"]
+            "ignore_transforms": [
+                "totals",
+                "aggregation",
+                "percentages",
+                "differences",
+                "pct_change"
+            ]
         },
         "pct_change": {
             "label_n": "n",
             "label_pct_change": "pct_change",
-            "ignore_transforms": ["totals", "percentages", "differences", "pct_change"]
+            "ignore_transforms": [
+                "totals",
+                "aggregation",
+                "percentages",
+                "differences",
+                "pct_change"
+            ]
         }
     },
     "panels": {

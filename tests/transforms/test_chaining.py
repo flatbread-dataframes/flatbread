@@ -8,6 +8,7 @@ from flatbread.testing.dataframe import make_test_df
 from flatbread.transforms import chaining
 from flatbread.transforms.panels import state
 import flatbread.transforms.aggregation.totals as totals
+import flatbread.transforms.aggregation.aggregation as agg
 import flatbread.transforms.panels.percentages as pcts
 import flatbread.transforms.panels.differences as diffs
 
@@ -70,6 +71,11 @@ class TestResolveIgnoredKeys(unittest.TestCase):
         self.assertIn('a', result)
         self.assertIn('b', result)
 
+    def test_picks_up_tracked_aggregation_labels(self):
+        df = agg.add_agg(self.df, 'mean', label='Mean')
+        result = chaining.resolve_ignored_keys(df, 'totals')
+        self.assertIn('Mean', result)
+
     def test_picks_up_tracked_margin_labels(self):
         # simulate add_totals having run
         df = totals.add_totals(self.df, axis=0)
@@ -87,6 +93,41 @@ class TestResolveIgnoredKeys(unittest.TestCase):
             if v['type'] == 'differences'
         )
         self.assertIn(diff_label, result)
+
+
+# region track_labels
+class TestTrackLabels(unittest.TestCase):
+    def setUp(self):
+        self.df = make_test_df(
+            nrows=3,
+            ncols=2,
+            data_gen_f=lambda r, c: randint(1, 100),
+        )
+
+    def test_creates_label_entry(self):
+        chaining.track_labels(self.df, 'aggregation', ['Mean'])
+        tracked = chaining.get_nested_key(self.df.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertEqual(tracked, {'Mean'})
+
+    def test_merges_with_existing(self):
+        chaining.track_labels(self.df, 'aggregation', ['Mean'])
+        chaining.track_labels(self.df, 'aggregation', ['Median'])
+        tracked = chaining.get_nested_key(self.df.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertEqual(tracked, {'Mean', 'Median'})
+
+    def test_separate_transform_keys(self):
+        chaining.track_labels(self.df, 'totals', ['Totals'])
+        chaining.track_labels(self.df, 'aggregation', ['Mean'])
+        totals_tracked = chaining.get_nested_key(self.df.attrs, ['flatbread', 'labels', 'totals'])
+        agg_tracked = chaining.get_nested_key(self.df.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertEqual(totals_tracked, {'Totals'})
+        self.assertEqual(agg_tracked, {'Mean'})
+
+    def test_duplicate_is_noop(self):
+        chaining.track_labels(self.df, 'totals', ['Totals'])
+        chaining.track_labels(self.df, 'totals', ['Totals'])
+        tracked = chaining.get_nested_key(self.df.attrs, ['flatbread', 'labels', 'totals'])
+        self.assertEqual(tracked, {'Totals'})
 
 
 # region panel state
@@ -154,6 +195,92 @@ class TestCheckPanelState(unittest.TestCase):
         paneled = diffs.add_differences(self.df, axis=0)
         result = state.check_panel_state(paneled, 'new_panel')
         pd.testing.assert_frame_equal(result, self.df)
+
+
+# region agg tracking
+class TestAggTracking(unittest.TestCase):
+    def setUp(self):
+        self.df = make_test_df(
+            nrows=5,
+            ncols=4,
+            data_gen_f=lambda r, c: randint(1, 100),
+        )
+
+    def test_add_agg_tracks_string_aggfunc(self):
+        result = agg.add_agg(self.df, 'mean')
+        tracked = chaining.get_nested_key(result.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertIn('mean', tracked)
+
+    def test_add_agg_tracks_custom_label(self):
+        result = agg.add_agg(self.df, 'mean', label='Average')
+        tracked = chaining.get_nested_key(result.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertIn('Average', tracked)
+
+    def test_add_agg_tracks_callable_name(self):
+        def maximum(x):
+            return x.max()
+        result = agg.add_agg(self.df, maximum)
+        tracked = chaining.get_nested_key(result.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertIn('maximum', tracked)
+
+    def test_add_agg_tracks_lambda_fallback(self):
+        result = agg.add_agg(self.df, lambda x: x.max() - x.min())
+        tracked = chaining.get_nested_key(result.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertIn('aggregation', tracked)
+
+    def test_totals_does_not_track_under_aggregation(self):
+        result = totals.add_totals(self.df, axis=0)
+        tracked = chaining.get_nested_key(result.attrs, ['flatbread', 'labels', 'aggregation'])
+        self.assertIsNone(tracked)
+
+
+# region agg → totals
+class TestChain_AggTotals(unittest.TestCase):
+    def setUp(self):
+        self.df = make_test_df(
+            nrows=5,
+            ncols=4,
+            data_gen_f=lambda r, c: (r + 1) * (c + 1) * 10,
+        )
+
+    def test_agg_excluded_from_totals(self):
+        result = (
+            self.df
+            .pipe(agg.add_agg, 'mean', label='Mean')
+            .pipe(totals.add_totals, axis=0)
+        )
+        totals_label = DEFAULTS['transforms']['totals']['label']
+        expected = self.df.sum()
+        actual = result.loc[totals_label]
+        self.assertTrue((actual == expected).all())
+
+    def test_agg_excluded_from_subtotals(self):
+        df = make_test_df(
+            nrows=6,
+            ncols=4,
+            data_gen_f=lambda r, c: (r + 1) * (c + 1) * 10,
+            idx_levels=2,
+            idx_dupes=[3, 1],
+        )
+        result = (
+            df
+            .pipe(agg.add_agg, 'mean', label='Mean')
+            .pipe(totals.add_subtotals, level=0, skip_single_rows=False)
+        )
+        subtotals_label = DEFAULTS['transforms']['subtotals']['label']
+        level0_sums = df.groupby(level=0).sum()
+        subtotal_rows = result.xs(subtotals_label, level=1)
+        self.assertTrue(subtotal_rows.eq(level0_sums).all(axis=None))
+
+    def test_agg_excluded_from_differences(self):
+        result = (
+            self.df
+            .pipe(agg.add_agg, 'mean', label='Mean')
+            .pipe(diffs.add_differences, axis=0)
+        )
+        panels = chaining.get_nested_key(result.attrs, ['flatbread', 'panels'])
+        diff_label = next(k for k, v in panels.items() if v['type'] == 'differences')
+        self.assertTrue(result[diff_label].loc['Mean'].isna().all())
 
 
 # region totals → pct

@@ -21,7 +21,6 @@ type DiffMethods = Literal['diff', 'pct_change']
 
 # region as diff
 @tooling.inject_defaults(DEFAULTS['transforms']['differences'])
-@chaining.track_margin_labels('differences')
 @singledispatch
 def as_differences(
     data,

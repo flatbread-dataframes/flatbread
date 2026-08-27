@@ -108,7 +108,6 @@ def resolve_panel_label(label: str, axis: Axis) -> str:
 
 # region as pct
 @tooling.inject_defaults(DEFAULTS['transforms']['percentages'])
-@chaining.track_margin_labels('percentages')
 @singledispatch
 def as_percentages(
     data,

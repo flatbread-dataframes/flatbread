@@ -104,7 +104,7 @@ def create_single_index_row(
 # region aggregation
 @tooling.handle_series_as_dataframe
 @tooling.handle_axis_rotation
-def add_agg(
+def _add_agg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
     *,
@@ -113,6 +113,7 @@ def add_agg(
     _fill: str|None = '',
     **kwargs,
 ) -> pd.DataFrame:
+    """Internal aggregation without label tracking."""
     data = df.copy()
     label = get_label(label, aggfunc)
     rows = chaining.get_data_mask(data.index, ignore_keys)
@@ -128,10 +129,55 @@ def add_agg(
     result.attrs = df.attrs
     return result
 
+
+def add_agg(
+    data: pd.DataFrame|pd.Series,
+    aggfunc: str|Callable,
+    *,
+    axis: Axis = 0,
+    label: str|None = None,
+    ignore_keys: str|list[str]|None = None,
+    _fill: str|None = '',
+    **kwargs,
+) -> pd.DataFrame|pd.Series:
+    """
+    Add aggregation row or column to a DataFrame.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        Input data.
+    aggfunc : str | Callable
+        Aggregation function.
+    axis : Axis
+        Axis to aggregate. Default 0.
+    label : str | None
+        Label for the aggregation row/column. If None, derived from
+        ``aggfunc``.
+    ignore_keys : str | list[str] | None
+        Keys to exclude from aggregation.
+    _fill : str | None
+        Fill value for non-data levels in MultiIndex.
+
+    Returns
+    -------
+    pd.DataFrame | pd.Series
+        Data with aggregation row/column added.
+    """
+    label = get_label(label, aggfunc)
+    result = _add_agg(
+        data, aggfunc,
+        axis=axis, label=label, ignore_keys=ignore_keys, _fill=_fill,
+        **kwargs,
+    )
+    chaining.track_labels(result, 'aggregation', [label])
+    return result
+
+
 # region subagg
 @tooling.handle_series_as_dataframe
 @tooling.handle_axis_rotation
-def add_subagg(
+def _add_subagg(
     df: pd.DataFrame,
     aggfunc: str|Callable,
     *,
@@ -142,7 +188,8 @@ def add_subagg(
     skip_single_rows: bool = True,
     _fill = '',
     **kwargs,
-):
+) -> pd.DataFrame:
+    """Internal subaggregation without label tracking."""
     return _build_subagg(
         df.copy(),
         aggfunc,
@@ -153,6 +200,62 @@ def add_subagg(
         skip_single_rows=skip_single_rows,
         _fill=_fill,
     )
+
+
+def add_subagg(
+    data: pd.DataFrame|pd.Series,
+    aggfunc: str|Callable,
+    *,
+    axis: Axis = 0,
+    level: Level = 0,
+    label: str|None = None,
+    include_level_name: bool = False,
+    ignore_keys: str|list[str]|None = None,
+    skip_single_rows: bool = True,
+    _fill: str = '',
+    **kwargs,
+) -> pd.DataFrame|pd.Series:
+    """
+    Add aggregation at specified MultiIndex levels.
+
+    Parameters
+    ----------
+    data : pd.DataFrame | pd.Series
+        Input data with MultiIndex.
+    aggfunc : str | Callable
+        Aggregation function.
+    axis : Axis
+        Axis to aggregate. Default 0.
+    level : Level
+        Index level(s) to aggregate at.
+    label : str | None
+        Label for the aggregation rows. If None, derived from ``aggfunc``.
+    include_level_name : bool
+        Whether to append level name to label.
+    ignore_keys : str | list[str] | None
+        Keys to exclude from aggregation.
+    skip_single_rows : bool
+        Skip groups with only one row.
+    _fill : str
+        Fill value for non-data levels.
+
+    Returns
+    -------
+    pd.DataFrame | pd.Series
+        Data with aggregation rows added at specified levels.
+    """
+    label = get_label(label, aggfunc)
+    result = _add_subagg(
+        data, aggfunc,
+        axis=axis, level=level, label=label,
+        include_level_name=include_level_name,
+        ignore_keys=ignore_keys,
+        skip_single_rows=skip_single_rows,
+        _fill=_fill,
+        **kwargs,
+    )
+    chaining.track_labels(result, 'aggregation', [label])
+    return result
 
 
 def _build_subagg(

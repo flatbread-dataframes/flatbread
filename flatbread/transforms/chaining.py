@@ -1,12 +1,11 @@
 """Utilities for tracking flatbread labels across chained operations."""
 
-import functools
-from typing import Any, Callable
+from typing import Any
 
 import pandas as pd
 
 from flatbread import DEFAULTS
-from flatbread.types import PandasObj, Axis
+from flatbread.types import PandasObj
 
 
 # region helpers
@@ -168,69 +167,26 @@ def resolve_ignored_keys(data, transform_name, ignore_keys=None):
 
 
 # region tag labels
-def track_margin_labels(
-    transform: str,
-    key_params: list[str] | None = None,
-) -> Callable:
+def track_labels(data: PandasObj, transform: str, labels: list[str]) -> None:
     """
-    Tag labels produced by flatbread operations for tracking in chained operations.
+    Store margin labels in ``data.attrs`` for a given transform.
 
-    This decorator identifies which labels are produced by a transform so that
-    future operations can make informed decisions about what to ignore. The labels
-    to track are determined by the 'key_labels' configuration for the transform.
+    Transforms call this to record which labels they produced, so that
+    subsequent chained operations can exclude them via
+    ``resolve_ignored_keys``.
 
     Parameters
     ----------
+    data : pd.DataFrame | pd.Series
+        Object whose ``.attrs`` will be mutated in place.
     transform : str
-        The transform name that corresponds to a section in the flatbread config
-        (e.g., 'totals', 'percentages', 'differences').
-
-    Returns
-    -------
-    Callable
-        Decorated function that tracks its key labels in df.attrs.
-
-    Notes
-    -----
-    Labels are stored in df.attrs under the structure:
-    ```python
-    {'flatbread': {
-        'labels': {
-            'percentages': ['pct'],
-            'totals': ['Totals'],
-            'differences': ['diff']
-        }
-    }}
-    ```
+        Transform key (e.g. ``'totals'``, ``'aggregation'``).
+    labels : list[str]
+        Labels to track.
     """
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(data: PandasObj, *args, **kwargs) -> PandasObj:
-            params = key_params or ['label']
-            labels_to_track = []
-            for param_name in params:
-                if param_name in kwargs and kwargs[param_name] is not None:
-                    labels_to_track.append(kwargs[param_name])
-
-            result = func(data, *args, **kwargs)
-
-            existing_labels = get_nested_key(
-                result.attrs,
-                ['flatbread', 'labels', transform]
-            ) or set()
-
-            all_labels = existing_labels.union(labels_to_track)
-
-            if not hasattr(result, 'attrs'):
-                result.attrs = {}
-
-            set_nested_key(
-                result.attrs,
-                ['flatbread', 'labels', transform],
-                all_labels
-            )
-
-            return result
-
-        return wrapper
-    return decorator
+    existing = get_nested_key(data.attrs, ['flatbread', 'labels', transform]) or set()
+    set_nested_key(
+        data.attrs,
+        keys = ['flatbread', 'labels', transform],
+        value = existing.union(labels),
+    )

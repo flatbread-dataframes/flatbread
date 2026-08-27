@@ -67,7 +67,14 @@ class DisplayConfig:
     def _extract_margin_labels(
         cls, defaults: dict[str, Any], data_attrs: dict | None
     ) -> set[str]:
-        return chaining.resolve_margin_labels(data_attrs)
+        transforms = defaults.get('transforms', {})
+        config_labels = set()
+        for key in ('totals', 'subtotals'):
+            label = transforms.get(key, {}).get('label')
+            if label:
+                config_labels.add(label)
+        tracked_labels = chaining.resolve_margin_labels(data_attrs)
+        return config_labels | tracked_labels
 
     def update(self, **kwargs) -> None:
         for key, value in kwargs.items():
@@ -246,8 +253,46 @@ class PitaDisplayMixin:
         return self
 
     def set_margin_labels(self, *labels: str) -> "PitaDisplayMixin":
-        """Set labels to be treated as margins"""
+        """
+        Replace all margin labels.
+
+        Discards auto-detected labels from config and flatbread
+        operations. To add labels without discarding, use
+        ``add_margin_labels``.
+
+        Parameters
+        ----------
+        *labels : str
+            Labels to use as the complete set of margin labels.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+        """
         self._config.margin_labels = set(labels)
+        return self
+
+    def add_margin_labels(self, *labels: str) -> "PitaDisplayMixin":
+        """
+        Add labels to be treated as margins.
+
+        Adds to the existing set of margin labels (auto-detected from
+        config and flatbread operations). To replace all margin labels,
+        use ``set_margin_labels`` or pass ``margin_labels`` to
+        ``configure_display``.
+
+        Parameters
+        ----------
+        *labels : str
+            One or more labels to add.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+        """
+        self._config.margin_labels.update(labels)
         return self
 
     def set_no_wrap(self, no_wrap: bool = True) -> "PitaDisplayMixin":
