@@ -100,7 +100,7 @@ class PitaSeries(PitaDisplayMixin):
         --------
         >>> s.pita.add_subagg('mean', level=0)
         """
-        return agg.add_agg(
+        return agg.add_subagg(
             self._obj,
             aggfunc,
             level = level,

@@ -112,7 +112,7 @@ class PitaFrame(PitaDisplayMixin):
         >>> df.pita.add_subagg('mean', level=0)
         >>> df.pita.add_subagg('mean', level=0, include_level_name=True)
         """
-        return agg.add_agg(
+        return agg.add_subagg(
             self._obj,
             aggfunc,
             axis = axis,
